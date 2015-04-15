@@ -10,7 +10,7 @@ public abstract class KeepAliveConnection
 	private final String clientID, serverID;
 	private final Thread monitorThread;
 	
-	protected final PingResponse resp;
+	protected final KeepAliveResponse resp;
 	
 	private boolean running = true;
 	
@@ -22,7 +22,7 @@ public abstract class KeepAliveConnection
 		
 		this.clientID = clientID;
 		this.serverID = serverID;
-		this.resp = new PingResponse();
+		this.resp = new KeepAliveResponse();
 		this.monitorThread = new Thread(new ConnectionMonitor(), getLocalID() + "-Monitor");
 		
 		this.cxnState = ConnectionState.DISCONNECTED;
@@ -44,7 +44,7 @@ public abstract class KeepAliveConnection
 	
 	protected abstract String getLocalID();
 
-	protected abstract void sendPing(long inReplyTo);
+	protected abstract void sendKA(long inReplyTo);
 	
 	
 	protected void init() {
@@ -58,9 +58,9 @@ public abstract class KeepAliveConnection
 		}
 	}
 	
-	protected void processPing(String senderID, long createdTime) {
+	protected void processKeepAlive(String senderID, long createdTime) {
 		
-		log.info("Ping received ({}) from {}", createdTime, senderID);
+		log.debug("KA received ({}) from {}", createdTime, senderID);
 		
 		// Update response
 		resp.update(createdTime);
@@ -68,13 +68,12 @@ public abstract class KeepAliveConnection
 		// Wait for a short time before sending a message back
 		try {
 			
-			log.debug("Waiting for {}ms", replyDelay);
 			Thread.sleep(replyDelay);
 
 		} catch(InterruptedException ie) { }
 		
 		// Send message in opposite direction
-		sendPing(createdTime);
+		sendKA(createdTime);
 		
 	}
 	
@@ -105,9 +104,33 @@ public abstract class KeepAliveConnection
 		
 	}
 	
+	public long getMonitorTimeout() {
+		
+		return monitorTimeout;
+		
+	}
+	
+	public long getReplyDelay() {
+		
+		return replyDelay;
+		
+	}
+	
 	public String getServerID() {
 		
 		return serverID;
+		
+	}
+	
+	public void setMonitorTimeout(long monitorTimeout) {
+		
+		this.monitorTimeout = monitorTimeout;
+		
+	}
+	
+	public void setReplyDelay(long replyDelay) {
+		
+		this.replyDelay = replyDelay;
 		
 	}
 	
@@ -117,7 +140,7 @@ public abstract class KeepAliveConnection
 		//@Override
 		public void run() {
 			
-			log.info("Monitor for {} starting", getLocalID());
+			log.debug("Monitor for {} started", getLocalID());
 			
 			long lastValue = resp.getLastCreatedTime();
 			
@@ -128,7 +151,7 @@ public abstract class KeepAliveConnection
 					while(running && !resp.hasChanged(lastValue, monitorTimeout)) {
 						
 						// Value in response hasn't changed - increment the timeout counter
-						log.info("Last response received from {} received {}ms ago", getRemoteID(), System.currentTimeMillis() - resp.getLastReceivedTime());
+						log.info("Last response received from {} received {} ms ago", getRemoteID(), System.currentTimeMillis() - resp.getLastReceivedTime());
 						
 						// Call out to check if we should keep running
 						running = cxnDown();
@@ -142,13 +165,12 @@ public abstract class KeepAliveConnection
 					
 				} catch(RuntimeException re) {
 					
-					log.warn("Caught {} in monitor process: {}", re.getClass().getName(), re.getMessage());
-					log.debug(re.getClass().getCanonicalName(), re);
+					log.warn("Exception in ConnectionMonitor", re);
 					
 				}
 			}
 			
-			log.info("Monitor for {} stopped", getLocalID());
+			log.debug("Monitor for {} stopped", getLocalID());
 			disconnect();
 			
 		}

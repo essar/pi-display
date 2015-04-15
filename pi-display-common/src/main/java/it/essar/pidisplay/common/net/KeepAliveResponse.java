@@ -1,10 +1,10 @@
 package it.essar.pidisplay.common.net;
 
-class PingResponse
+class KeepAliveResponse
 {
 	private long createdTime, receivedTime, stt;
 	
-	PingResponse() {
+	KeepAliveResponse() {
 		
 		createdTime = System.currentTimeMillis();
 		receivedTime = System.currentTimeMillis();
