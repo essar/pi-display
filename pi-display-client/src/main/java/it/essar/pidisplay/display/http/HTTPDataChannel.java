@@ -33,13 +33,13 @@ public class HTTPDataChannel implements DataChannel
 	private void openConnection(String path) throws IOException {
 		
 		URL u = new URL(uri.getScheme(), uri.getHost(), uri.getPort(), path);
-		log.info("Opening connection to server: {}", u.toExternalForm());
+		log.debug("Opening connection to server: {}", u.toExternalForm());
 
 		data = (HttpURLConnection) u.openConnection();
 		
 	}
 	
-	private JSONObject readJSONObject(String path) throws IOException {
+	private JSONObject readJSONObject(String path) throws IOException, ParseException {
 		
 		BufferedReader r = null;
 		JSONObject obj = null;
@@ -48,15 +48,11 @@ public class HTTPDataChannel implements DataChannel
 			
 			openConnection(path);
 			r = new BufferedReader(new InputStreamReader(data.getInputStream(), data.getContentEncoding()));
+			log.debug("Opened reader to {}", path);
 			
 			JSONParser p = new JSONParser();
 			obj = (JSONObject) p.parse(r);
-			log.info("Parsed JSON object: {}", obj.toJSONString());
-			
-		} catch(ParseException pe) {
-			
-			log.error("Unable to parse JSON object: {}", pe.getMessage());
-			log.debug(pe.getClass().getCanonicalName(), pe);
+			log.debug("Parsed JSON object: {}", obj.toJSONString());
 			
 		} finally {
 			
@@ -70,7 +66,7 @@ public class HTTPDataChannel implements DataChannel
 				
 			} catch(IOException ioe) {
 			
-				log.warn("Caught IOException closing reader", ioe);
+				log.debug("Caught IOException closing reader", ioe);
 				
 			}
 		}
@@ -79,13 +75,13 @@ public class HTTPDataChannel implements DataChannel
 		
 	}
 	
-	//@Override
+	@Override
 	public byte[] getElement(String path) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 	
-	//@Override
+	@Override
 	public ServerInfo getInfo() {
 
 		try {
@@ -95,18 +91,25 @@ public class HTTPDataChannel implements DataChannel
 			String clientID = (String) obj.get("clientID");
 			String serverID = (String) obj.get("serverID");
 			String brokerURL = (String) obj.get("brokerURL");
-				
+			
 			ServerInfo init = new ServerInfo();
 			init.setClientID(clientID);
 			init.setServerID(serverID);
 			init.setBrokerURL(brokerURL);
-				
+			
 			return init;
 			
 		} catch(IOException ioe) {
 			
-			// Wrap and raise
+			// Log, wrap and raise
+			log.debug(ioe.getClass().getCanonicalName(), ioe);
 			throw new DataChannelException("Unable to read server info", ioe);
+			
+		} catch(ParseException pe) {
+			
+			// Log, wrap and raise
+			log.debug(pe.getClass().getCanonicalName(), pe);
+			throw new DataChannelException("Unable to read server info", pe);
 			
 		}
 	}

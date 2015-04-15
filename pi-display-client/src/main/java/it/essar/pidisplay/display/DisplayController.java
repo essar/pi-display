@@ -62,7 +62,7 @@ public class DisplayController implements Runnable
 			} else {
 				
 				// Log and ignore
-				log.warn("Message received with unknown application ID: {}", appID);
+				log.warn("Ignoring message received with unknown application ID: {}", appID);
 				
 			}
 		}
@@ -80,34 +80,35 @@ public class DisplayController implements Runnable
 		
 			case REFRESH:
 				
-				log.debug("REFRESH message");
+				log.info("REFRESH message");
 				break;
 				
 			case RESET:
 				
-				log.debug("RESET message");
+				log.info("RESET message");
 				break;
 				
 			case SHUTDOWN:
 				
-				log.debug("SHUTDOWN message");
+				log.info("SHUTDOWN message");
 				running = false;
 				break;
 				
 			case UPDATE:
 				
-				log.debug("UPDATE message");
+				log.info("UPDATE message");
 				break;
 				
 			default:
 				
 				throw new UnsupportedOperationException("Unknown message type");
+		
 		}
 	}
 	
 	private void initControlChannel() {
 		
-		log.info("Initialising control channel");
+		log.debug("Initialising control channel");
 		
 		if(clientID == null || serverID == null) {
 			
@@ -121,7 +122,7 @@ public class DisplayController implements Runnable
 	
 	private void initDataChannel() {
 		
-		log.info("Initialising data channel");
+		log.debug("Initialising data channel");
 		
 		String dataURI = "http://localhost:8001";
 		try {
@@ -131,7 +132,7 @@ public class DisplayController implements Runnable
 			
 		} catch(URISyntaxException use) {
 			
-			log.error("Invalid data channel URI: {}", dataURI);
+			log.warn("Invalid data channel URI: {}", dataURI);
 			
 		}
 		
@@ -166,8 +167,8 @@ public class DisplayController implements Runnable
 				
 		} catch(URISyntaxException use) {
 				
-			log.error("Invalid broker URI: {}", brokerURIStr);
-				
+			log.warn("Invalid broker URI: {}", brokerURIStr);
+			
 		}
 	}
 	
@@ -186,7 +187,7 @@ public class DisplayController implements Runnable
 		}
 	}
 	
-	//@Override
+	@Override
 	public void run() {
 		
 		log.info("Display controller started");
@@ -204,8 +205,7 @@ public class DisplayController implements Runnable
 			} catch(RuntimeException re) {
 					
 				// Handle any exception in processing the message
-				log.error("Caught {} whilst processing control message: {}", re.getClass().getName(), re.getMessage());
-				log.debug(re.getClass().getCanonicalName(), re);
+				log.warn("Caught Exception processing control message", re);
 					
 			}
 		}
@@ -218,14 +218,14 @@ public class DisplayController implements Runnable
 	
 	private class DisplayControllerEnvironment implements DisplayEnvironment
 	{
-		//@Override
+		@Override
 		public ControlChannel getControlChannel() {
 
 			return ctl;
 			
 		}
 		
-		//@Override
+		@Override
 		public DataChannel getDataChannel() {
 
 			return dat;

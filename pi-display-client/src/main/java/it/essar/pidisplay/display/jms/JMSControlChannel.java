@@ -28,6 +28,9 @@ public class JMSControlChannel extends KeepAliveConnection implements ControlCha
 	
 	private ActiveMQConnectionFactory cxFac;
 	private Connection cxn;
+	
+	private int maxConnectAttempts = 5;
+	private long connectRetryDelay = 3000L;
 
 	private ReadOnlyChannel ctl;
 	private ReadWriteChannel ka;
@@ -47,7 +50,6 @@ public class JMSControlChannel extends KeepAliveConnection implements ControlCha
 	protected boolean connect() {
 		
 		int connectAttempts = 0;
-		int maxConnectAttempts = 5;
 		
 		cxnState = ConnectionState.CONNECTING;
 		
@@ -71,7 +73,7 @@ public class JMSControlChannel extends KeepAliveConnection implements ControlCha
 					String qName = getClientID() + ".KA";
 					String selector = propertySenderID + " = '" + getRemoteID() + "'";
 					ka = new ReadWriteChannel(cxn, qName, new PingerMessageListener(), selector);
-					log.info("Created read-write channel on {} using {}", qName, selector);
+					log.debug("Created read-write channel on {} using {}", qName, selector);
 					
 				}
 				
@@ -80,13 +82,13 @@ public class JMSControlChannel extends KeepAliveConnection implements ControlCha
 					// Create control channel
 					String qName = getClientID() + ".DISP";
 					ctl = new ReadOnlyChannel(cxn, qName);
-					log.info("Created read-only channel on {}", qName);
+					log.debug("Created read-only channel on {}", qName);
 					
 				}
 				
 				cxn.start();
 				cxnState = ConnectionState.CONNECTED;
-					
+				
 				log.info("Connected to {}", cxFac.getBrokerURL());
 				
 				// Call back method indicating connection is up
@@ -95,15 +97,15 @@ public class JMSControlChannel extends KeepAliveConnection implements ControlCha
 			} catch(JMSException jmse) {
 				
 				log.info("Unable to connect, retrying...");
-				log.debug(jmse.getClass().getName(), jmse);
+				log.debug("JMSException establishing connection", jmse);
 				
 				// Try again unless we've already reached maximum
 				
-				if(connectAttempts >= maxConnectAttempts) {
+				if(maxConnectAttempts > 0 && connectAttempts >= maxConnectAttempts) {
 					
 					cxnState = ConnectionState.DISCONNECTED;
 					
-					log.warn("Could not connect to host: {}", jmse.getMessage());
+					log.error("Could not connect to host: {}", jmse.getMessage());
 					return false;
 					
 				}
@@ -111,7 +113,7 @@ public class JMSControlChannel extends KeepAliveConnection implements ControlCha
 				try {
 					
 					// Wait a beat before trying again
-					Thread.sleep(3000L);
+					Thread.sleep(connectRetryDelay);
 					
 				} catch(InterruptedException ie) {}
 			}
@@ -135,18 +137,16 @@ public class JMSControlChannel extends KeepAliveConnection implements ControlCha
 				
 			} catch(JMSException jmse) {
 				
-				log.warn("Caught exception stopping Connection: {}", jmse.getMessage());
-				log.debug(jmse.getClass().getName(), jmse);
+				log.debug("Caught JMSException stopping Connection", jmse);
 				
 			}
-			
 		}
 		
 		// Close control channel
 		if(ctl != null) {
 
 			ctl.close();
-			log.info("Control channel closed");
+			log.debug("Control channel closed");
 		
 		}
 		
@@ -154,7 +154,7 @@ public class JMSControlChannel extends KeepAliveConnection implements ControlCha
 		if(ka != null) {
 			
 			ka.close();
-			log.info("Keep-alive channel closed");
+			log.debug("Keep-alive channel closed");
 			
 		}
 		
@@ -167,8 +167,7 @@ public class JMSControlChannel extends KeepAliveConnection implements ControlCha
 				
 			} catch(JMSException jmse) {
 				
-				log.warn("Caught exception closing Connection: {}", jmse.getMessage());
-				log.debug(jmse.getClass().getName(), jmse);
+				log.debug("Caught JMSException closing Connection", jmse);
 				
 			}
 			
@@ -193,7 +192,7 @@ public class JMSControlChannel extends KeepAliveConnection implements ControlCha
 
 		log.info("Client connection to server is UP");
 		
-		sendPing(0L);
+		sendKA(0L);
 		return true;
 
 	}
@@ -215,18 +214,18 @@ public class JMSControlChannel extends KeepAliveConnection implements ControlCha
 	}
 	
 	@Override
-	protected void sendPing(long inReplyTo) {
+	protected void sendKA(long inReplyTo) {
 
 		if(cxn == null) {
 			
-			log.debug("sendPing(): Connection is null");
+			log.debug("sendKA(): Connection is null");
 			throw new IllegalStateException("No connection to broker");
 			
 		}
 		
 		if(ka == null) {
 			
-			log.debug("sendPing(): ka is null");
+			log.debug("sendKA(): ka is null");
 			throw new IllegalStateException("No keep-alive channel");
 			
 		}
@@ -245,8 +244,9 @@ public class JMSControlChannel extends KeepAliveConnection implements ControlCha
 		
 		} catch(JMSException jmse) {
 			
-			log.warn("Caught {} sending message: {}", jmse.getClass().getName(), jmse.getMessage());
-			log.debug(jmse.getClass().getCanonicalName(), jmse);
+			// Log wrap & raise
+			log.debug("JMSException whilst sending KA message", jmse);
+			throw new ControlChannelException("Unable to send KA message", jmse);
 			
 		}
 	}
@@ -259,7 +259,19 @@ public class JMSControlChannel extends KeepAliveConnection implements ControlCha
 		
 	}
 	
-	//@Override
+	public long getConnectRetryDelay() {
+		
+		return connectRetryDelay;
+		
+	}
+	
+	public int getMaxConnectAttempts() {
+		
+		return maxConnectAttempts;
+		
+	}
+	
+	@Override
 	public ControlChannelMessage readMessage() {
 	
 		try {
@@ -268,16 +280,29 @@ public class JMSControlChannel extends KeepAliveConnection implements ControlCha
 			
 		} catch(JMSException jmse) {
 			
-			// Wrap and raise
+			// Log, wrap and raise
+			log.debug("JMSException reading control channel message", jmse);
 			throw new ControlChannelException("Unable to read message from control channel", jmse);
 			
 		}
 	}
 	
+	public void setConnectRetryDelay(long connectRetryDelay) {
+		
+		this.connectRetryDelay = connectRetryDelay;
+		
+	}
+	
+	public void setMaxConnectAttempts(int maxConnectAttempts) {
+		
+		this.maxConnectAttempts = maxConnectAttempts;
+		
+	}
+	
 	private class PingerMessageListener implements MessageListener
 	{
 		
-		//@Override
+		@Override
 		public void onMessage(Message msg) {
 			
 			try {
@@ -285,12 +310,15 @@ public class JMSControlChannel extends KeepAliveConnection implements ControlCha
 				// Read message properties
 				long createdTime = msg.getLongProperty(propertyCreatedTime);
 				String senderID = msg.getStringProperty(propertySenderID);
-				processPing(senderID, createdTime);
+				processKeepAlive(senderID, createdTime);
 									
 			} catch(JMSException jmse) {
 				
-				log.warn("Caught {} processing JMS message: {}", jmse.getClass().getName(), jmse.getMessage());
-				log.debug(jmse.getClass().getCanonicalName(), jmse);
+				log.warn("JMSException processing KA message", jmse);
+				
+			} catch(RuntimeException re) {
+				
+				log.warn("Exception in PingerMessageListener", re);
 				
 			}
 		}
