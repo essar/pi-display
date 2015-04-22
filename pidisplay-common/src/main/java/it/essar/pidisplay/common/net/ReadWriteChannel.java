@@ -1,4 +1,4 @@
-package it.essar.pidisplay.common.net.jms;
+package it.essar.pidisplay.common.net;
 
 import javax.jms.Connection;
 import javax.jms.JMSException;

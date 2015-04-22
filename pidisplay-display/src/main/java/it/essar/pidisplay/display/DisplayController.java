@@ -1,10 +1,14 @@
 package it.essar.pidisplay.display;
 
 import it.essar.pidisplay.apps.dashboard.display.DashboardApplicationPane;
-import it.essar.pidisplay.common.net.KeepAliveConnection.ConnectionStateProperty;
+import it.essar.pidisplay.common.appapi.Application;
+import it.essar.pidisplay.common.appapi.ControlChannel;
+import it.essar.pidisplay.common.appapi.ControlChannelMessage;
+import it.essar.pidisplay.common.appapi.DataChannel;
+import it.essar.pidisplay.common.appapi.DisplayEnvironment;
+import it.essar.pidisplay.common.appapi.ServerInfo;
+import it.essar.pidisplay.common.net.ConnectionStateProperty;
 import it.essar.pidisplay.display.fx.ClientApplication;
-import it.essar.pidisplay.display.http.HTTPDataChannel;
-import it.essar.pidisplay.display.jms.JMSControlChannel;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -117,7 +121,7 @@ public class DisplayController implements Runnable
 			
 		}
 		
-		JMSControlChannel jmsCtl = new JMSControlChannel(brokerURI, clientID, serverID);
+		DisplayControlChannel jmsCtl = new DisplayControlChannel(brokerURI, clientID, serverID);
 		ctl = jmsCtl;
 		
 		// Place observer on connection state
@@ -136,7 +140,7 @@ public class DisplayController implements Runnable
 		try {
 		
 			log.debug("dataURI={}", dataURI);
-			dat = new HTTPDataChannel(new URI(dataURI));
+			dat = new DisplayDataChannel(new URI(dataURI));
 			
 		} catch(URISyntaxException use) {
 			

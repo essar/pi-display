@@ -1,8 +1,8 @@
 package it.essar.pidisplay.apps.dashboard.display;
 
-import it.essar.pidisplay.display.Application;
-import it.essar.pidisplay.display.ControlChannelMessage;
-import it.essar.pidisplay.display.DisplayEnvironment;
+import it.essar.pidisplay.common.appapi.Application;
+import it.essar.pidisplay.common.appapi.ControlChannelMessage;
+import it.essar.pidisplay.common.appapi.DisplayEnvironment;
 
 public class DashboardApplication implements Application
 {

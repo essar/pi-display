@@ -1,4 +1,4 @@
-package it.essar.pidisplay.display;
+package it.essar.pidisplay.common.appapi;
 
 public interface DisplayEnvironment
 {

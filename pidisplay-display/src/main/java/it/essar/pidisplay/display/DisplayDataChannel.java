@@ -1,8 +1,7 @@
-package it.essar.pidisplay.display.http;
+package it.essar.pidisplay.display;
 
-import it.essar.pidisplay.display.DataChannel;
-import it.essar.pidisplay.display.DataChannelException;
-import it.essar.pidisplay.display.ServerInfo;
+import it.essar.pidisplay.common.appapi.DataChannel;
+import it.essar.pidisplay.common.appapi.ServerInfo;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -17,14 +16,14 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-public class HTTPDataChannel implements DataChannel
+public class DisplayDataChannel implements DataChannel
 {
-	private static final Logger log = LogManager.getLogger(HTTPDataChannel.class);
+	private static final Logger log = LogManager.getLogger(DisplayDataChannel.class);
 	
 	private HttpURLConnection data;
 	private URI uri;
 
-	public HTTPDataChannel(URI serverURI) {
+	public DisplayDataChannel(URI serverURI) {
 		
 		this.uri = serverURI;
 		

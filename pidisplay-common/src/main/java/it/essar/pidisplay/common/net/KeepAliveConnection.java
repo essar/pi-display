@@ -1,7 +1,13 @@
 package it.essar.pidisplay.common.net;
 
-import java.util.Observable;
+import java.net.URI;
 
+import javax.jms.Connection;
+import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.MessageListener;
+
+import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -9,25 +15,38 @@ public abstract class KeepAliveConnection
 {
 	protected final Logger log = LogManager.getLogger(KeepAliveConnection.class);
 	
+	private static final String propertyCreatedTime = "createdTime";
+	private static final String propertyInReplyTo = "inReplyTo";
+	private static final String propertySenderID = "senderID";
+	
 	private final String clientID, serverID;
 	private final Thread monitorThread;
 	
 	protected final KeepAliveResponse resp;
 	
+	private ActiveMQConnectionFactory cxFac;
 	private boolean running = true;
+	private Connection cxn;
 	private ConnectionState cxnState;
+	private ReadWriteChannel ka;
 	
+	protected int maxConnectAttempts = 5;
+	protected long connectRetryDelay = 3000L;
 	protected long monitorTimeout = 10000L;
 	protected long replyDelay = 3000L;
 	
+	
 	public final ConnectionStateProperty cxnStateProperty;
 	
-	protected KeepAliveConnection(String clientID, String serverID) {
+	protected KeepAliveConnection(URI brokerURI, String clientID, String serverID) {
 		
 		this.clientID = clientID;
 		this.serverID = serverID;
 		this.resp = new KeepAliveResponse();
-		this.monitorThread = new Thread(new ConnectionMonitor(), getLocalID() + "-Monitor");
+		this.monitorThread = new Thread(new KeepAliveMonitor(), getLocalID() + "-Monitor");
+		
+		// Initialise connection factory
+		cxFac = new ActiveMQConnectionFactory(brokerURI);
 		
 		cxnStateProperty = new ConnectionStateProperty();
 		setConnectionState(ConnectionState.DISCONNECTED);
@@ -36,36 +55,134 @@ public abstract class KeepAliveConnection
 		
 	}
 	
-	
-	protected abstract boolean connect();
-	
-	protected abstract void disconnect();
+	protected abstract void cxnDown();
 	
 	protected abstract boolean cxnTimeout();
+	
+	protected abstract void cxnUp();
+	
+	protected abstract void destroyChannels();
+	
+	protected abstract void initChannels();
 	
 	protected abstract String getRemoteID();
 	
 	protected abstract String getLocalID();
 
-	protected abstract void sendKA(long inReplyTo);
-	
-	
-	protected void processKeepAlive(String senderID, long createdTime) {
-		
-		log.debug("KA received ({}) from {}", createdTime, senderID);
-		
-		// Update response
-		resp.update(createdTime);
-		
-		// Wait for a short time before sending a message back
-		try {
-			
-			Thread.sleep(replyDelay);
 
-		} catch(InterruptedException ie) { }
+	protected boolean connect() {
 		
-		// Send message in opposite direction
-		sendKA(createdTime);
+		int connectAttempts = 0;
+		
+		setConnectionState(ConnectionState.CONNECTING);
+		
+		while(getConnectionState() == ConnectionState.CONNECTING) {
+		
+			connectAttempts ++;
+			
+			try {
+				
+				log.info("Connecting to {}, attempt {}/{}", cxFac.getBrokerURL(), connectAttempts, maxConnectAttempts);
+				
+				if(cxn == null) {
+					
+					cxn = cxFac.createConnection();
+					
+				}
+				
+				{
+					
+					// Create keep-alive channel
+					String qName = getClientID() + ".KA";
+					String selector = propertySenderID + " = '" + getRemoteID() + "'";
+					ka = new ReadWriteChannel(cxn, qName, new KeepAliveMessageListener(), selector);
+					log.debug("Created read-write channel on {} using {}", qName, selector);
+					
+				}
+				
+				// Create additional channels
+				initChannels();
+				
+				// Start the JMS connection
+				cxn.start();
+				
+				setConnectionState(ConnectionState.CONNECTED);
+				
+				// Call out that connection is up
+				cxnUp();
+				
+			} catch(JMSException jmse) {
+				
+				log.info("Unable to connect, retrying...");
+				log.debug("JMSException establishing connection", jmse);
+				
+				// Try again unless we've already reached maximum
+				
+				if(maxConnectAttempts > 0 && connectAttempts >= maxConnectAttempts) {
+					
+					log.error("Could not connect to host: {}", jmse.getMessage());
+					return false;
+					
+				}
+				
+				try {
+					
+					// Wait a beat before trying again
+					Thread.sleep(connectRetryDelay);
+					
+				} catch(InterruptedException ie) {}
+			}
+		}
+		
+		return true;
+	}
+	
+	protected void disconnect() {
+		
+		setConnectionState(ConnectionState.DISCONNECTED);
+		log.info("Client connection to server is DOWN");
+		
+		if(cxn != null) {
+			
+			try {
+				
+				cxn.stop();
+				log.debug("Connection stopped");
+				
+			} catch(JMSException jmse) {
+				
+				log.debug("Caught JMSException stopping Connection", jmse);
+				
+			}
+		}
+		
+		// Close other channels
+		destroyChannels();
+		
+		// Close keep-alive channel
+		if(ka != null) {
+			
+			ka.close();
+			log.debug("Keep-alive channel closed");
+			
+		}
+		
+		if(cxn != null) {
+			
+			try {
+				
+				cxn.close();
+				log.debug("Connection closed");
+				
+			} catch(JMSException jmse) {
+				
+				log.debug("Caught JMSException closing Connection", jmse);
+				
+			}
+			
+			cxn = null;
+
+		}
 		
 	}
 	
@@ -76,6 +193,34 @@ public abstract class KeepAliveConnection
 	
 	}
 	
+	protected void sendKA(long inReplyTo) throws JMSException {
+		
+		if(cxn == null) {
+			
+			log.debug("sendKA(): Connection is null");
+			throw new IllegalStateException("No connection to broker");
+			
+		}
+		
+		if(ka == null) {
+			
+			log.debug("sendKA(): ka is null");
+			throw new IllegalStateException("No keep-alive channel");
+			
+		}
+		
+		// Build the message
+		Message reply = ka.createMessage();
+		reply.setStringProperty(propertySenderID, getLocalID());
+		reply.setLongProperty(propertyCreatedTime, System.currentTimeMillis());
+		reply.setLongProperty(propertyInReplyTo, inReplyTo);
+				
+		// Send the message
+		ka.sendMessage(reply);
+		log.info("Sent message {}", reply.getJMSMessageID());
+		
+	}
+	
 	protected void setConnectionState(ConnectionState cxnState) {
 		
 		log.debug("Connection state={}", cxnState);
@@ -84,12 +229,25 @@ public abstract class KeepAliveConnection
 		
 	}
 	
+	
 	public void close() {
 		
 		// Stop monitor thread
 		log.debug("Closing KeepAliveConnection from {} to {}", clientID, serverID);
 		running = false;
 		monitorThread.interrupt();
+		
+	}
+	
+	public long getConnectRetryDelay() {
+		
+		return connectRetryDelay;
+		
+	}
+	
+	public Connection getConnection() {
+		
+		return cxn;
 		
 	}
 	
@@ -102,6 +260,12 @@ public abstract class KeepAliveConnection
 	public String getClientID() {
 		
 		return clientID;
+		
+	}
+	
+	public int getMaxConnectAttempts() {
+		
+		return maxConnectAttempts;
 		
 	}
 	
@@ -120,6 +284,21 @@ public abstract class KeepAliveConnection
 	public String getServerID() {
 		
 		return serverID;
+		
+	}
+	
+	
+	public void setConnectRetryDelay(long connectRetryDelay) {
+		
+		log.debug("ConnectRetryDelay={}", connectRetryDelay);
+		this.connectRetryDelay = connectRetryDelay;
+		
+	}
+	
+	public void setMaxConnectAttempts(int maxConnectAttempts) {
+		
+		log.debug("MaxConnectAttempts={}", maxConnectAttempts);
+		this.maxConnectAttempts = maxConnectAttempts;
 		
 	}
 	
@@ -149,10 +328,48 @@ public abstract class KeepAliveConnection
 		}
 	}
 	
-	class ConnectionMonitor implements Runnable
+	private class KeepAliveMessageListener implements MessageListener
+	{
+		
+		@Override
+		public void onMessage(Message msg) {
+			
+			try {
+
+				// Read message properties
+				long createdTime = msg.getLongProperty(propertyCreatedTime);
+				String senderID = msg.getStringProperty(propertySenderID);
+				log.debug("KA received ({}) from {}", createdTime, senderID);
+				
+				// Update response
+				resp.update(createdTime);
+				
+				// Wait for a short time before sending a message back
+				try {
+					
+					Thread.sleep(replyDelay);
+
+				} catch(InterruptedException ie) { }
+				
+				// Send message in opposite direction
+				sendKA(createdTime);
+									
+			} catch(JMSException jmse) {
+				
+				log.warn("JMSException processing KA message", jmse);
+				
+			} catch(RuntimeException re) {
+				
+				log.warn("Exception in KeepAliveMessageListener", re);
+				
+			}
+		}
+	}
+	
+	class KeepAliveMonitor implements Runnable
 	{
 
-		//@Override
+		@Override
 		public void run() {
 			
 			log.debug("Monitor for {} started", getLocalID());
@@ -188,38 +405,6 @@ public abstract class KeepAliveConnection
 			log.debug("Monitor for {} stopped", getLocalID());
 			disconnect();
 			
-		}
-	}
-	
-	public static class ConnectionStateProperty extends Observable
-	{
-		
-		private ConnectionState oldState, newState;
-		
-		public ConnectionState getOldState() {
-			
-			return oldState;
-			
-		}
-		
-		public ConnectionState getNewState() {
-			
-			return newState;
-			
-		}
-		
-		void setConnectionState(ConnectionState cxnState) {
-			
-			oldState = newState;
-			newState = cxnState;
-			
-			if(newState != oldState) {
-				
-				setChanged();
-				
-			}
-			
-			notifyObservers();
 		}
 	}
 }
