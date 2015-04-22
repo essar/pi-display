@@ -1,17 +1,10 @@
 package it.essar.pidisplay.server.broker;
 
-import it.essar.pidisplay.common.net.ConnectionState;
 import it.essar.pidisplay.common.net.KeepAliveConnection;
-import it.essar.pidisplay.common.net.ReadWriteChannel;
+import it.essar.pidisplay.common.net.WriteOnlyChannel;
 
 import java.net.URI;
 
-import javax.jms.Connection;
-import javax.jms.JMSException;
-import javax.jms.Message;
-import javax.jms.MessageListener;
-
-import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -19,7 +12,7 @@ public class ServerControlChannel extends KeepAliveConnection
 {
 	private static final Logger log = LogManager.getLogger(ServerControlChannel.class);
 	
-	private ReadWriteChannel ka;
+	private WriteOnlyChannel ctl;
 	
 	public ServerControlChannel(URI brokerURI, String clientID, String serverID) {
 
@@ -32,15 +25,18 @@ public class ServerControlChannel extends KeepAliveConnection
 		
 		log.info("Client connection to client is DOWN");
 		
+		// TODO Client clean-up
 	}
 
 	@Override
 	protected boolean cxnTimeout() {
 
+		// Try and determine if connection to broker has been lost
 		// Should try and re-establish connection to broker
 		// Reset connection
 		//return reset();
 		return false;
+		
 	}
 	
 	@Override
@@ -54,12 +50,12 @@ public class ServerControlChannel extends KeepAliveConnection
 	protected void destroyChannels() {
 		
 		// Close control channel
-		/*if(ctl != null) {
+		if(ctl != null) {
 	
 			ctl.close();
 			log.debug("Control channel closed");
 		
-		}*/
+		}
 	}
 	
 	@Override
@@ -67,12 +63,11 @@ public class ServerControlChannel extends KeepAliveConnection
 
 		// Create control channel
 		String qName = getClientID() + ".DISP";
-	//	ctl = new ReadOnlyChannel(cxn, qName);
-	//	log.debug("Created read-only channel on {}", qName);
+		ctl = new WriteOnlyChannel(getConnection(), qName);
+		log.debug("Created write-only channel on {}", qName);
+	
 	}
 	
-	
-
 	@Override
 	protected String getLocalID() {
 
