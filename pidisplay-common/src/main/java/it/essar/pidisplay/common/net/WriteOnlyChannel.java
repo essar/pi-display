@@ -7,18 +7,15 @@ import javax.jms.MessageProducer;
 import javax.jms.Queue;
 import javax.jms.Session;
 
-public class WriteOnlyChannel
+public class WriteOnlyChannel extends AbstractChannel
 {
-	private final Connection cxn;
-	private final String qName;
 	
 	private Session sess;
 	private MessageProducer mp;
 	
 	public WriteOnlyChannel(Connection con, String qName) {
 		
-		this.cxn = con;
-		this.qName = qName;
+		super(con, qName);
 		
 	}
 	

@@ -9,11 +9,8 @@ import javax.jms.MessageProducer;
 import javax.jms.Queue;
 import javax.jms.Session;
 
-public class ReadWriteChannel
+public class ReadWriteChannel extends AbstractChannel
 {
-	private final Connection cxn;
-	private final String qName;
-	
 	private Session sess;
 	private MessageConsumer mc;
 	private MessageListener ml;
@@ -28,8 +25,7 @@ public class ReadWriteChannel
 	
 	public ReadWriteChannel(Connection con, String qName, MessageListener ml, String selector) {
 		
-		this.cxn = con;
-		this.qName = qName;
+		super(con, qName);
 		this.ml = ml;
 		this.selector = selector;
 		

@@ -6,18 +6,15 @@ import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.Session;
 
-public class ReadOnlyChannel
+public class ReadOnlyChannel extends AbstractChannel
 {
-	private final Connection cxn;
-	private final String qName;
-	
+
 	private Session sess;
 	private MessageConsumer mc;
 	
 	public ReadOnlyChannel(Connection con, String qName) {
 		
-		this.cxn = con;
-		this.qName = qName;
+		super(con, qName);
 		
 	}
 	
