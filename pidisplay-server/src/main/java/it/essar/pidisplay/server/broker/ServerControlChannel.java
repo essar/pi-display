@@ -5,6 +5,8 @@ import it.essar.pidisplay.common.net.WriteOnlyChannel;
 
 import java.net.URI;
 
+import javax.jms.JMSException;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -14,36 +16,58 @@ public class ServerControlChannel extends KeepAliveConnection
 	
 	private WriteOnlyChannel ctl;
 	
+	public static long clientTimeout = 30000L;
+	
 	public ServerControlChannel(URI brokerURI, String clientID, String serverID) {
 
 		super(brokerURI, clientID, serverID);
 		
 	}
 	
+	void cleanup() {
+		
+		// TODO Clean up client resources
+		log.debug("Cleaning up after {}", getClientID());
+		
+	}
+	
 	@Override
 	protected void cxnDown() {
 		
-		log.info("Client connection to client is DOWN");
-		
-		// TODO Client clean-up
+		// Client clean-up
+		cleanup();
+	
 	}
 
 	@Override
 	protected boolean cxnTimeout() {
 
 		// Try and determine if connection to broker has been lost
-		// Should try and re-establish connection to broker
-		// Reset connection
-		//return reset();
-		return false;
+		if(ctl != null && ctl.isAlive()) {
+			
+			if(getMillisSinceLastResp() > clientTimeout) {
+			
+				// Waited too long, assume client has gone away
+				cleanup();
+				return false;
+				
+			}
+			
+		} else {
+			
+			// Should try and re-establish connection to broker
+			// Reset connection
+			return reset();
+			
+		}
+		
+		return true;
 		
 	}
 	
 	@Override
 	protected void cxnUp() {
 		
-		log.info("Client connection to client is UP");
-
 	}
 	
 	@Override
@@ -59,13 +83,13 @@ public class ServerControlChannel extends KeepAliveConnection
 	}
 	
 	@Override
-	protected void initChannels() {
+	protected void initChannels() throws JMSException {
 
 		// Create control channel
 		String qName = getClientID() + ".DISP";
 		ctl = new WriteOnlyChannel(getConnection(), qName);
 		log.debug("Created write-only channel on {}", qName);
-	
+
 	}
 	
 	@Override
