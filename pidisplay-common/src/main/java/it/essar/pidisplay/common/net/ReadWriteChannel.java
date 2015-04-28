@@ -17,25 +17,26 @@ public class ReadWriteChannel extends AbstractChannel
 	private MessageProducer mp;
 	private String selector;
 	
-	public ReadWriteChannel(Connection con, String qName) {
+	public ReadWriteChannel(Connection con, String qName) throws JMSException {
 		
 		this(con, qName, null, null);
 		
 	}
 	
-	public ReadWriteChannel(Connection con, String qName, MessageListener ml, String selector) {
+	public ReadWriteChannel(Connection con, String qName, MessageListener ml, String selector) throws JMSException {
 		
 		super(con, qName);
 		this.ml = ml;
 		this.selector = selector;
 		
+		// Must call this early to set up message consumer before connection is started
+		init();
+		
 	}
 	
-	private void reset() throws JMSException {
-		
-		close();
-		
-		// Recreate objects
+	@Override
+	protected void init() throws JMSException {
+
 		sess = cxn.createSession(false, Session.AUTO_ACKNOWLEDGE);
 		
 		Queue q = sess.createQueue(qName);
@@ -49,6 +50,7 @@ public class ReadWriteChannel extends AbstractChannel
 		}
 	}
 	
+	@Override
 	public void close() {
 		
 		if(sess != null) {
@@ -99,6 +101,6 @@ public class ReadWriteChannel extends AbstractChannel
 		}
 		
 		mp.send(msg);
-	
+		
 	}
 }

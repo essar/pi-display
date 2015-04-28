@@ -12,22 +12,24 @@ public class ReadOnlyChannel extends AbstractChannel
 	private Session sess;
 	private MessageConsumer mc;
 	
-	public ReadOnlyChannel(Connection con, String qName) {
+	public ReadOnlyChannel(Connection con, String qName) throws JMSException {
 		
 		super(con, qName);
 		
+		// Must call this early to set up message consumer before connection is started
+		init();
+
 	}
 	
-	private void reset() throws JMSException {
+	@Override
+	protected void init() throws JMSException {
 		
-		close();
-		
-		// Recreate objects
 		sess = cxn.createSession(false, Session.AUTO_ACKNOWLEDGE);
 		mc = sess.createConsumer(sess.createQueue(qName));
-	
+			
 	}
-	
+
+	@Override
 	public void close() {
 		
 		if(sess != null) {

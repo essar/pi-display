@@ -32,7 +32,7 @@ public abstract class KeepAliveConnection
 	
 	protected int maxConnectAttempts = 5;
 	protected long connectRetryDelay = 3000L;
-	protected long monitorTimeout = 10000L;
+	protected long monitorTimeout = 5000L;
 	protected long replyDelay = 3000L;
 	
 	
@@ -63,7 +63,7 @@ public abstract class KeepAliveConnection
 	
 	protected abstract void destroyChannels();
 	
-	protected abstract void initChannels();
+	protected abstract void initChannels() throws JMSException;
 	
 	protected abstract String getRemoteID();
 	
@@ -87,6 +87,7 @@ public abstract class KeepAliveConnection
 				if(cxn == null) {
 					
 					cxn = cxFac.createConnection();
+					log.debug("Connected to {}", cxFac.getBrokerURL());
 					
 				}
 				
@@ -109,6 +110,7 @@ public abstract class KeepAliveConnection
 				setConnectionState(ConnectionState.CONNECTED);
 				
 				// Call out that connection is up
+				log.info("{} connection to {} is UP", getLocalID(), getRemoteID());
 				cxnUp();
 				
 			} catch(JMSException jmse) {
@@ -140,7 +142,7 @@ public abstract class KeepAliveConnection
 	protected void disconnect() {
 		
 		setConnectionState(ConnectionState.DISCONNECTED);
-		log.info("Client connection to server is DOWN");
+		log.info("{} connection to {} is DOWN", getLocalID(), getRemoteID());
 		
 		if(cxn != null) {
 			
@@ -183,6 +185,12 @@ public abstract class KeepAliveConnection
 			cxn = null;
 
 		}
+		
+	}
+	
+	protected long getMillisSinceLastResp() {
+		
+		return System.currentTimeMillis() - resp.getLastCreatedTime();
 		
 	}
 	
@@ -402,7 +410,7 @@ public abstract class KeepAliveConnection
 				}
 			}
 			
-			log.debug("Monitor for {} stopped", getLocalID());
+			log.debug("Monitor for {} stopped, disconnecting", getLocalID());
 			disconnect();
 			
 		}

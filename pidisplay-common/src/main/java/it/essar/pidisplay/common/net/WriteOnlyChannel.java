@@ -13,17 +13,18 @@ public class WriteOnlyChannel extends AbstractChannel
 	private Session sess;
 	private MessageProducer mp;
 	
-	public WriteOnlyChannel(Connection con, String qName) {
+	public WriteOnlyChannel(Connection con, String qName) throws JMSException {
 		
 		super(con, qName);
 		
+		// Must call this early to set up message consumer before connection is started
+		init();
+
 	}
 	
-	private void reset() throws JMSException {
+	@Override
+	protected void init() throws JMSException {
 		
-		close();
-		
-		// Recreate objects
 		sess = cxn.createSession(false, Session.AUTO_ACKNOWLEDGE);
 		
 		Queue q = sess.createQueue(qName);
@@ -31,6 +32,7 @@ public class WriteOnlyChannel extends AbstractChannel
 	
 	}
 	
+	@Override
 	public void close() {
 		
 		if(sess != null) {

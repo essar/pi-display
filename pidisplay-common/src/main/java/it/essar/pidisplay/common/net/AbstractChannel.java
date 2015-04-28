@@ -4,7 +4,7 @@ import javax.jms.Connection;
 import javax.jms.JMSException;
 import javax.jms.Session;
 
-class AbstractChannel
+abstract class AbstractChannel
 {
 
 	protected final Connection cxn;
@@ -14,6 +14,17 @@ class AbstractChannel
 		
 		this.cxn = cxn;
 		this.qName = qName;
+		
+	}
+	
+	protected abstract void init() throws JMSException;
+	
+	public abstract void close() throws JMSException;
+	
+	public void reset() throws JMSException {
+		
+		close();
+		init();
 		
 	}
 	
