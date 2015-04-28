@@ -29,14 +29,11 @@ class DisplayControlChannel extends KeepAliveConnection implements ControlChanne
 	@Override
 	protected void cxnDown() {
 		
-		log.info("Client connection to server is DOWN");
-
 	}
 	
 	@Override
 	protected void cxnUp() {
 
-		log.info("Client connection to server is UP");
 		try {
 
 			sendKA(0L);
@@ -60,7 +57,7 @@ class DisplayControlChannel extends KeepAliveConnection implements ControlChanne
 	}
 	
 	@Override
-	protected void initChannels() {
+	protected void initChannels() throws JMSException {
 
 		// Create control channel
 		String qName = getClientID() + ".DISP";
