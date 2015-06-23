@@ -60,7 +60,7 @@ public class FXApplication extends Application implements Runnable
 		
 		log.error(message, t);
 		
-		if(! (getActiveApplicationID() == null || apps.get(getActiveApplicationID()).handleException(message, t))) {
+		if(! (getActiveApplicationID() != null && apps.get(getActiveApplicationID()).handleException(message, t))) {
 	
 			base.handleException(message, t);
 	
