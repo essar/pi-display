@@ -29,8 +29,9 @@ public class DisplayDataChannel implements DataChannel
 	}
 
 	public DisplayDataChannel(URL serverURL) {
-		
+
 		this.url = serverURL;
+		log.debug("url={}", url);
 		
 	}
 	
@@ -85,6 +86,12 @@ public class DisplayDataChannel implements DataChannel
 		
 	}
 	
+	URL getURL() {
+		
+		return url;
+		
+	}
+	
 	@Override
 	public byte[] getElement(String path) {
 		// TODO Auto-generated method stub
@@ -111,9 +118,16 @@ public class DisplayDataChannel implements DataChannel
 			
 		} catch(IOException | ParseException e) {
 			
-			// Log, wrap and raise
+			// Wrap and raise
 			throw new DataChannelException("Unable to read server info", e);
 			
 		}
+	}
+	
+	@Override
+	public String toString() {
+		
+		return String.format("%s [%s]", getClass().getName(), url);
+		
 	}
 }

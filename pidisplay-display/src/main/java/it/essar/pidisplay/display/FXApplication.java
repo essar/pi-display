@@ -58,11 +58,13 @@ public class FXApplication extends Application implements Runnable
 	
 	private void handleException(String message, Throwable t) {
 		
-		//if(! apps.get(getActiveApplicationID()).handleException(message, t)) {
+		log.error(message, t);
 		
+		if(! (getActiveApplicationID() == null || apps.get(getActiveApplicationID()).handleException(message, t))) {
+	
 			base.handleException(message, t);
-			
-		//}
+	
+		}
 	}
 	
 	private void loadApplication(String appID) {
@@ -80,6 +82,8 @@ public class FXApplication extends Application implements Runnable
 	private void openDataChannel() {
 		
 		log.debug("Opening data channel");
+		
+		// Create data channel connection
 		dat = new DisplayDataChannel();
 		
 		if(dat == null) {
@@ -94,16 +98,14 @@ public class FXApplication extends Application implements Runnable
 		
 		if(init == null) {
 			
-			log.debug("Null ServerInit");
+			log.debug("Null ServerInit | dat={}", dat);
 			throw new DataChannelException("Invalid server information");
 			
 		}
 			
 		serverID = init.getServerID();
-		log.debug("serverID={}", serverID);
-		
 		clientID = init.getClientID();
-		log.debug("clientID={}", clientID);
+		log.debug("serverID={} | clientID={}", serverID, clientID);
 
 		String brokerURIStr = init.getBrokerURL();
 		try {
@@ -151,36 +153,44 @@ public class FXApplication extends Application implements Runnable
 		
 		// Get application ID
 		String appID = cMsg.getMessageAppID();
+		log.debug("Processing message for appID={}", appID);
 		
 		// Pass to relevant application
 		if(appID == null || CoreApplication.APPLICATION_ID.equals(appID)) {
 			
 			// Handle by core application
-			switch(CoreApplication.MessageTypes.valueOf(cMsg.getMessageType())) {
+			String msgType = cMsg.getMessageType();
+			log.debug("Core application message: {}", msgType);
+			
+			switch(CoreApplication.MessageTypes.valueOf(msgType)) {
 			
 				case REFRESH:
 					
+					log.info("Application refresh");
 					break;
 					
 				case RESET:
 
 					// Load default application
+					log.info("Application reset");
 					loadApplication(DashboardApplication.APP_ID);
 					break;
 					
 				case SHUTDOWN:
 					
 					// Shutdown the application
+					log.info("Application shutdown");
 					closeApplication();
 					break;
 				
 				case UPDATE:
 					
+					log.info("Application update");
 					break;
 					
 				default:
 					
-					throw new UnsupportedOperationException("Unknown message type");
+					throw new UnsupportedOperationException("Unknown message type for core application: " + cMsg.getMessageType());
 			
 			}
 
@@ -194,7 +204,7 @@ public class FXApplication extends Application implements Runnable
 			} else {
 				
 				// Log and ignore
-				log.warn("Ignoring message received with unknown application ID: {}", appID);
+				log.info("Ignoring message received with unknown application ID: {}", appID);
 				
 			}
 		}
@@ -291,7 +301,6 @@ public class FXApplication extends Application implements Runnable
 		
 		} catch(DataChannelException | ControlChannelException e) {
 			
-			log.error("Unable to connect to server", e);
 			handleException("Unable to connect to server", e);
 			
 		}
