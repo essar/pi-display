@@ -7,7 +7,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.URI;
 import java.net.URL;
 
 import org.apache.logging.log4j.LogManager;
@@ -21,20 +20,32 @@ public class DisplayDataChannel implements DataChannel
 	private static final Logger log = LogManager.getLogger(DisplayDataChannel.class);
 	
 	private HttpURLConnection data;
-	private URI uri;
-
-	public DisplayDataChannel(URI serverURI) {
+	private final URL url;
+	
+	public DisplayDataChannel() {
 		
-		this.uri = serverURI;
+		this(DisplayProperties.getDataConnectionURL());
+
+	}
+
+	public DisplayDataChannel(URL serverURL) {
+		
+		this.url = serverURL;
 		
 	}
 	
 	private void openConnection(String path) throws IOException {
 		
-		URL u = new URL(uri.getScheme(), uri.getHost(), uri.getPort(), path);
+		if(url == null) {
+			
+			throw new DataChannelException("No URL");
+			
+		}
+		URL u = new URL(url, path);
 		log.debug("Opening connection to server: {}", u.toExternalForm());
 
 		data = (HttpURLConnection) u.openConnection();
+		log.debug("Connection established");
 		
 	}
 	
@@ -65,7 +76,7 @@ public class DisplayDataChannel implements DataChannel
 				
 			} catch(IOException ioe) {
 			
-				log.debug("Caught IOException closing reader", ioe);
+				log.warn("Caught IOException closing reader", ioe);
 				
 			}
 		}
@@ -98,17 +109,10 @@ public class DisplayDataChannel implements DataChannel
 			
 			return init;
 			
-		} catch(IOException ioe) {
+		} catch(IOException | ParseException e) {
 			
 			// Log, wrap and raise
-			log.debug(ioe.getClass().getCanonicalName(), ioe);
-			throw new DataChannelException("Unable to read server info", ioe);
-			
-		} catch(ParseException pe) {
-			
-			// Log, wrap and raise
-			log.debug(pe.getClass().getCanonicalName(), pe);
-			throw new DataChannelException("Unable to read server info", pe);
+			throw new DataChannelException("Unable to read server info", e);
 			
 		}
 	}

@@ -16,14 +16,18 @@ public class DashboardApplicationPane extends StackPane
 		webContent = new WebView();
 		engine = webContent.getEngine();
 		
+	}
+	
+	void init() {
+		
 		engine.load("http://localhost:8001/page/" + DashboardApplication.APP_ID + "/dashboard");
 		engine.setUserAgent(getClass().getName());
 		
 		getChildren().add(webContent);
-		
+	
 	}
 	
-	public void loadPage(String path) {
+	void loadPage(String path) {
 		
 		engine.load(prePath + "" + path);
 		

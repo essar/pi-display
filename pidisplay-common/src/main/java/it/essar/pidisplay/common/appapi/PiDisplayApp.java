@@ -1,7 +1,9 @@
 package it.essar.pidisplay.common.appapi;
 
-public interface Application
+public interface PiDisplayApp
 {
+	
+	boolean handleException(String msg, Throwable t);
 
 	void init(DisplayEnvironment env);
 	

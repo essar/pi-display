@@ -10,3 +10,10 @@
  	-fx-background: rgb(28, 28, 28);
  	
  }
+ 
+ #err-msg {
+ 	
+ 	-fx-text-fill: rgb(217, 217, 217);
+ 	-fx-font-size: 24pt;
+ 	
+ }

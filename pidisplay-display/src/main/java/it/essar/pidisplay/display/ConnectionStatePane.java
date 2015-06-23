@@ -1,4 +1,4 @@
-package it.essar.pidisplay.display.fx;
+package it.essar.pidisplay.display;
 
 import it.essar.pidisplay.common.net.ConnectionState;
 import javafx.animation.FadeTransition;

@@ -7,4 +7,6 @@ public interface DisplayEnvironment
 	
 	public DataChannel getDataChannel();
 	
+	public Display getDisplayClient();
+	
 }

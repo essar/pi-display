@@ -1,17 +1,21 @@
 package it.essar.pidisplay.apps.dashboard.display;
 
-import it.essar.pidisplay.common.appapi.Application;
+import it.essar.pidisplay.common.appapi.PiDisplayApp;
 import it.essar.pidisplay.common.appapi.ControlChannelMessage;
 import it.essar.pidisplay.common.appapi.DisplayEnvironment;
 
-public class DashboardApplication implements Application
+public class DashboardApplication implements PiDisplayApp
 {
 	public static final String APP_ID = "it.essar.pidisplay.apps.dashboard";
 	
+	private final String clientID;
+	
 	private DashboardApplicationPane pane;
+	private DisplayEnvironment env;
 	
 	public DashboardApplication(String clientID) {
 		
+		this.clientID = clientID;
 		pane = new DashboardApplicationPane(clientID);
 		
 	}
@@ -24,20 +28,46 @@ public class DashboardApplication implements Application
 	}
 	
 	@Override
-	public void init(DisplayEnvironment env) {
+	public boolean handleException(String msg, Throwable t) {
 		// TODO Auto-generated method stub
+		return false;
+	}
+	
+	@Override
+	public void init(DisplayEnvironment env) {
 		
+		this.env = env;
+
 	}
 	
 	@Override
 	public void load() {
-		// TODO Auto-generated method stub
+		
+		// Load initial pane
+		env.getDisplayClient().setApplicationPane(pane);
+		pane.init();
 		
 	}
 	
 	@Override
 	public void processMessage(ControlChannelMessage cMsg) {
-		// TODO Auto-generated method stub
 		
+		switch(DashboardApplication.MessageTypes.valueOf(cMsg.getMessageType())) {
+		
+			// Only functionality of the dashboard application is to display HTML from the server
+			case DISPLAY:
+		
+				String path = cMsg.getMessageBody(); // Read path from msg
+				pane.loadPage(path);
+				break;
+				
+			default:
+				
+				throw new UnsupportedOperationException("Unknown message type");
+		
+		}
 	}
+	
+	public enum MessageTypes
+	{ DISPLAY }
 }
