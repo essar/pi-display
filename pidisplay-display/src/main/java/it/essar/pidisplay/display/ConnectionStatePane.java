@@ -12,6 +12,10 @@ import javafx.util.Duration;
 
 class ConnectionStatePane extends FlowPane
 {
+	private static final Color COL_CONNECTED = new Color(0.0, 1.0, 0.0, 1.0);
+	private static final Color COL_CONNECTING = new Color(0.0, 1.0, 0.0, 1.0);
+	private static final Color COL_DISCONNECTED = new Color(1.0, 0.0, 0.0, 1.0);
+	
 	private ConnectionStateIcon icon;
 	private Label lblCxnState;
 	
@@ -46,7 +50,7 @@ class ConnectionStatePane extends FlowPane
 			
 				icon.connecting();
 				lblCxnState.setText("Connecting");
-				lblCxnState.setStyle("-fx-text-fill: green");
+				lblCxnState.setTextFill(COL_CONNECTING);
 				lblCxnState.getStyleClass().add("cxnstate-connecting");
 				break;
 				
@@ -54,7 +58,7 @@ class ConnectionStatePane extends FlowPane
 				
 				icon.connected();
 				lblCxnState.setText("Connected");
-				lblCxnState.setStyle("-fx-text-fill: green");
+				lblCxnState.setTextFill(COL_CONNECTED);
 				lblCxnState.getStyleClass().add("cxnstate-connected");
 				break;
 				
@@ -62,7 +66,7 @@ class ConnectionStatePane extends FlowPane
 				
 				icon.disconnected();
 				lblCxnState.setText("Disconnected");
-				lblCxnState.setStyle("-fx-text-fill: red");
+				lblCxnState.setTextFill(COL_DISCONNECTED);
 				lblCxnState.getStyleClass().add("cxnstate-disconnected");
 				break;
 		
@@ -88,7 +92,7 @@ class ConnectionStatePane extends FlowPane
 			if(ftx != null) {
 				
 				ftx.stop();
-
+				
 			}
 		}
 		
@@ -120,22 +124,22 @@ class ConnectionStatePane extends FlowPane
 
 			// Set up transition - one second cycle and 3 second delay
 			clearFader();
-			setFill(Color.GREEN);
-			
+			setFill(COL_CONNECTED);
+
 		}
 		
 		private void connecting() {
 			
 			// Set up transition - half second cycle and no delay
+			setFill(COL_CONNECTING);
 			setFader(500, 0);
-			setFill(Color.GREEN);
 						
 		}
 		
 		private void disconnected() {
 		
 			clearFader();
-			setFill(Color.RED);
+			setFill(COL_DISCONNECTED);
 			
 		}
 	}

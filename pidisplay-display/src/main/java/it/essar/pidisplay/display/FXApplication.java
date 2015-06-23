@@ -267,10 +267,10 @@ public class FXApplication extends Application implements Runnable
 
 				// Process the message
 				processMessage(cMsg);
-	
+				
 			} catch(RuntimeException re) {
 					
-				// Handle any exception in processing the message
+				// Handle any other exception in processing the message
 				log.warn(re.getMessage(), re);
 					
 			}
@@ -316,7 +316,7 @@ public class FXApplication extends Application implements Runnable
 		}
 		
 		this.primaryStage = primaryStage;
-		primaryStage.setFullScreen(true);
+		//primaryStage.setFullScreen(true);
 		primaryStage.setScene(base);
 		primaryStage.show();
 		

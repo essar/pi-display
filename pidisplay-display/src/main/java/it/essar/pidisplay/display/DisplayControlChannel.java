@@ -138,7 +138,9 @@ class DisplayControlChannel extends KeepAliveConnection implements ControlChanne
 	
 		try {
 			
-			return new JMSControlChannelMessage(ctl.readMessage());
+			Message msg = ctl.readMessage();
+			log.info("Read message from control channel, messageID={}", msg.getJMSMessageID());
+			return new JMSControlChannelMessage(msg);
 			
 		} catch(JMSException jmse) {
 			

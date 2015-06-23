@@ -18,7 +18,8 @@ class BaseScene extends Scene implements Display
 	
 	protected BaseScene(BorderPane root) {
 		
-		super(root, 1920, 1080);
+		//super(root, 1920, 1080);
+		super(root, 300, 300);
 		getStylesheets().add("it/essar/pidisplay/display/base.css");
 		
 		this.root = root;
