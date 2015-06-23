@@ -30,6 +30,22 @@ public class DisplayProperties
 		}
 		
 	}
+	
+	public static Long getControlChannelMessageTimeout() {
+		
+		String ctlChannelMsgTimeoutStr = props.getProperty("pidisplay.net.ctl.msg_timeout", "10000");
+		try {
+			
+			return Long.parseLong(ctlChannelMsgTimeoutStr);
+			
+		} catch(NumberFormatException nfe) {
+			
+			log.warn("Invalid msg_timeout: {}", ctlChannelMsgTimeoutStr);
+			
+		}
+		
+		return 0L;
+	}
 
 	public static URL getDataConnectionURL() {
 		

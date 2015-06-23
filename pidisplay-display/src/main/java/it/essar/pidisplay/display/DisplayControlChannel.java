@@ -26,6 +26,28 @@ class DisplayControlChannel extends KeepAliveConnection implements ControlChanne
 			
 	}
 	
+	private synchronized boolean waitForChannel(long timeout) {
+		
+		int maxTimeoutCount = 5;
+		int timeoutCount = 0;
+		long timeoutWait = timeout / maxTimeoutCount;
+			
+		while(ctl == null && timeoutCount < maxTimeoutCount) {
+				
+			log.debug("Waiting for control channel to be established");
+			timeoutCount ++;
+				
+			try {
+
+				wait(timeoutWait);
+				
+			} catch(InterruptedException ie) { }
+		}
+		
+		return (ctl != null);
+
+	}
+	
 	@Override
 	protected void cxnDown() {
 		
@@ -61,9 +83,14 @@ class DisplayControlChannel extends KeepAliveConnection implements ControlChanne
 
 		// Create control channel
 		String qName = getClientID() + ".DISP";
-		ctl = new ReadOnlyChannel(getConnection(), qName);
-		log.debug("Created read-only channel on {}", qName);
 		
+		synchronized(this) {
+			
+			ctl = new ReadOnlyChannel(getConnection(), qName);
+			notifyAll();
+			log.debug("Created read-only channel on {}", qName);
+			
+		}
 	}
 	
 	@Override
@@ -102,6 +129,12 @@ class DisplayControlChannel extends KeepAliveConnection implements ControlChanne
 	
 	@Override
 	public ControlChannelMessage readMessage() {
+		
+		if(! waitForChannel(DisplayProperties.getControlChannelMessageTimeout())) {
+			
+			throw new ControlChannelException("No connection to control channel");
+			
+		}
 	
 		try {
 			
@@ -109,8 +142,7 @@ class DisplayControlChannel extends KeepAliveConnection implements ControlChanne
 			
 		} catch(JMSException jmse) {
 			
-			// Log, wrap and raise
-			log.debug("JMSException reading control channel message", jmse);
+			// Wrap and raise
 			throw new ControlChannelException("Unable to read message from control channel", jmse);
 			
 		}

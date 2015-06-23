@@ -60,8 +60,9 @@ public class FXApplication extends Application implements Runnable
 		
 		log.error(message, t);
 		
-		if(! (getActiveApplicationID() != null && apps.get(getActiveApplicationID()).handleException(message, t))) {
+		if(getActiveApplicationID() == null || !apps.get(getActiveApplicationID()).handleException(message, t)) {
 	
+			// Handle exception in base scene
 			base.handleException(message, t);
 	
 		}
@@ -141,8 +142,6 @@ public class FXApplication extends Application implements Runnable
 		
 	}
 	
-	
-	
 	private void processMessage(ControlChannelMessage cMsg) {
 		
 		if(cMsg == null) {
@@ -151,41 +150,42 @@ public class FXApplication extends Application implements Runnable
 			
 		}
 		
+		
 		// Get application ID
 		String appID = cMsg.getMessageAppID();
-		log.debug("Processing message for appID={}", appID);
-		
+		String msgType = cMsg.getMessageType();
+		log.debug("processMessage(): application={}; message type={}", appID, msgType);
+
 		// Pass to relevant application
 		if(appID == null || CoreApplication.APPLICATION_ID.equals(appID)) {
+		
+			log.info("Process core application message: {}", msgType);
 			
 			// Handle by core application
-			String msgType = cMsg.getMessageType();
-			log.debug("Core application message: {}", msgType);
-			
 			switch(CoreApplication.MessageTypes.valueOf(msgType)) {
 			
 				case REFRESH:
 					
-					log.info("Application refresh");
+					log.debug("Core application: REFRESH");
 					break;
 					
 				case RESET:
 
 					// Load default application
-					log.info("Application reset");
+					log.debug("Core application: RESET");
 					loadApplication(DashboardApplication.APP_ID);
 					break;
 					
 				case SHUTDOWN:
 					
 					// Shutdown the application
-					log.info("Application shutdown");
+					log.debug("Core application: SHUTDOWN");
 					closeApplication();
 					break;
 				
 				case UPDATE:
 					
-					log.info("Application update");
+					log.debug("Core application: UPDATE");
 					break;
 					
 				default:
@@ -223,7 +223,6 @@ public class FXApplication extends Application implements Runnable
 				
 				}
 			});
-		
 		}
 	}
 	
@@ -272,7 +271,7 @@ public class FXApplication extends Application implements Runnable
 			} catch(RuntimeException re) {
 					
 				// Handle any exception in processing the message
-				log.warn("Caught Exception processing control message", re);
+				log.warn(re.getMessage(), re);
 					
 			}
 		}
@@ -304,7 +303,6 @@ public class FXApplication extends Application implements Runnable
 			handleException("Unable to connect to server", e);
 			
 		}
-			
 	}
 	
 	@Override
@@ -346,6 +344,7 @@ public class FXApplication extends Application implements Runnable
 	
 	private class ConnectionStateObserver implements Observer
 	{
+		
 		@Override
 		public void update(Observable o, Object obj) {
 			
@@ -360,6 +359,7 @@ public class FXApplication extends Application implements Runnable
 	
 	private class FXApplicationDisplayEnvironment implements DisplayEnvironment
 	{
+		
 		@Override
 		public ControlChannel getControlChannel() {
 
