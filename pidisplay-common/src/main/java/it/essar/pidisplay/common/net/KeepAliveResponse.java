@@ -7,16 +7,22 @@ class KeepAliveResponse
 	KeepAliveResponse() {
 		
 		createdTime = System.currentTimeMillis();
-		receivedTime = System.currentTimeMillis();
+		receivedTime = 0L;
 		stt = 0L;
 		
 	}
 	
 	synchronized boolean hasChanged(long since, long wait) {
 		
+		if(receivedTime == 0L) {
+			
+			return false;
+			
+		}
 		if(createdTime != since) {
 			
 			return true;
+			
 		}
 		try {
 			
@@ -43,6 +49,12 @@ class KeepAliveResponse
 	long getLastStt() {
 		
 		return stt;
+		
+	}
+	
+	void reset() {
+		
+		update(System.currentTimeMillis());
 		
 	}
 	

@@ -31,8 +31,8 @@ public abstract class KeepAliveConnection
 	private ReadWriteChannel ka;
 	
 	protected int maxConnectAttempts = 5;
-	protected long connectRetryDelay = 3000L;
-	protected long monitorTimeout = 5000L;
+	protected long connectRetryDelay = 5000L;
+	protected long monitorTimeout = 10000L;
 	protected long replyDelay = 3000L;
 	
 	
@@ -82,14 +82,14 @@ public abstract class KeepAliveConnection
 			
 			try {
 				
-				log.info("Connecting to {}, attempt {}/{}", cxFac.getBrokerURL(), connectAttempts, maxConnectAttempts);
+				log.debug("Connecting to {}, attempt {}/{}", cxFac.getBrokerURL(), connectAttempts, maxConnectAttempts);
 				
 				if(cxn == null) {
-					
+				
 					cxn = cxFac.createConnection();
-					log.debug("Connected to {}", cxFac.getBrokerURL());
 					
 				}
+				log.debug("Connection established with {}", cxFac.getBrokerURL());
 				
 				{
 					
@@ -109,13 +109,16 @@ public abstract class KeepAliveConnection
 				
 				setConnectionState(ConnectionState.CONNECTED);
 				
+				// Reset response
+				resp.reset();
+				
 				// Call out that connection is up
 				log.info("{} connection to {} is UP", getLocalID(), getRemoteID());
 				cxnUp();
 				
 			} catch(JMSException jmse) {
 				
-				log.info("Unable to connect, retrying...");
+				log.info("Unable to connect to {}, retrying...", cxFac.getBrokerURL());
 				log.debug("JMSException establishing connection", jmse);
 				
 				// Try again unless we've already reached maximum
@@ -130,6 +133,7 @@ public abstract class KeepAliveConnection
 				try {
 					
 					// Wait a beat before trying again
+					log.debug("Waiting {} ms", connectRetryDelay);
 					Thread.sleep(connectRetryDelay);
 					
 				} catch(InterruptedException ie) {}
@@ -148,6 +152,7 @@ public abstract class KeepAliveConnection
 			
 			try {
 				
+				// Stop processing messages on the connection
 				cxn.stop();
 				log.debug("Connection stopped");
 				
@@ -161,9 +166,9 @@ public abstract class KeepAliveConnection
 		// Close other channels
 		destroyChannels();
 		
-		// Close keep-alive channel
 		if(ka != null) {
 			
+			// Close keep-alive channel
 			ka.close();
 			log.debug("Keep-alive channel closed");
 			
@@ -173,6 +178,7 @@ public abstract class KeepAliveConnection
 			
 			try {
 				
+				// Close the connection
 				cxn.close();
 				log.debug("Connection closed");
 				
@@ -185,7 +191,6 @@ public abstract class KeepAliveConnection
 			cxn = null;
 
 		}
-		
 	}
 	
 	protected long getMillisSinceLastResp() {
@@ -196,6 +201,7 @@ public abstract class KeepAliveConnection
 	
 	protected boolean reset() {
 		
+		log.debug("Connection reset");
 		disconnect();
 		return connect();
 	
@@ -225,15 +231,18 @@ public abstract class KeepAliveConnection
 				
 		// Send the message
 		ka.sendMessage(reply);
-		log.info("Sent message {}", reply.getJMSMessageID());
+		log.debug("Sent message {}", reply.getJMSMessageID());
 		
 	}
 	
-	protected void setConnectionState(ConnectionState cxnState) {
+	protected synchronized void setConnectionState(ConnectionState cxnState) {
 		
 		log.debug("Connection state={}", cxnState);
 		this.cxnState = cxnState;
 		cxnStateProperty.setConnectionState(cxnState);
+		
+		// Notify any waiting threads of state change
+		notifyAll();
 		
 	}
 	
@@ -336,6 +345,12 @@ public abstract class KeepAliveConnection
 		}
 	}
 	
+	public String toString() {
+		
+		return String.format("%s from %s to %s [%s]", getClass().getName(), clientID, serverID, getConnectionState());
+		
+	}
+	
 	private class KeepAliveMessageListener implements MessageListener
 	{
 		
@@ -390,7 +405,7 @@ public abstract class KeepAliveConnection
 					
 					while(running && !resp.hasChanged(lastValue, monitorTimeout)) {
 						
-						// Value in response hasn't changed - increment the timeout counter
+						// Value in response hasn't changed
 						log.info("Last response received from {} received {} ms ago", getRemoteID(), System.currentTimeMillis() - resp.getLastReceivedTime());
 						
 						// Call out to check if we should keep running

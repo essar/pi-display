@@ -194,11 +194,11 @@ public class MessageBroker implements MonitorableProcess
 		// Start the broker
 		startBroker();
 		
-		try {
+		/*try {
 			Thread.sleep(3000L);
 		} catch(InterruptedException ie) {
 			
-		}
+		}*/
 		
 		try {
 			ServerControlChannel svr = new ServerControlChannel(new URI("tcp://localhost:61616/" + MessageBroker.BROKER_NAME), "TestClient", "TestServer");
@@ -207,21 +207,21 @@ public class MessageBroker implements MonitorableProcess
 			throw new RuntimeException(e);
 		}
 		
-		try {
+		/*try {
 			Thread.sleep(15000L);
 		} catch(InterruptedException ie) {
 			
-		}
+		}*/
 		
 		// Abort the broker - monitor should restart it
-		try {
+		/*try {
 			mb.broker.stop();
 		} catch(Exception e) {
 			throw new RuntimeException(e);
-		}
+		}*/
 		
 		try {
-			Thread.sleep(45000L);
+			Thread.sleep(3600000L);
 		} catch(InterruptedException ie) {
 			
 		}

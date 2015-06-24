@@ -210,7 +210,7 @@ public class FXApplication extends Application implements Runnable
 		}
 	}
 	
-	private void setConnectionState(ConnectionState newState) {
+	private synchronized void setConnectionState(ConnectionState newState) {
 		
 		if(base != null) {
 			
@@ -224,6 +224,10 @@ public class FXApplication extends Application implements Runnable
 				}
 			});
 		}
+		
+		// Release any waits based on connection state
+		notifyAll();
+		
 	}
 	
 	public String getActiveApplicationID() {
@@ -268,11 +272,33 @@ public class FXApplication extends Application implements Runnable
 				// Process the message
 				processMessage(cMsg);
 				
+			} catch(ControlChannelException cce) {
+				
+				// Something went wrong on the control channel
+				log.warn(cce.getMessage(), cce);
+				handleException("Unable to connect to server", cce);
+				
+				// Wait a little bit
+				try {
+					
+					Thread.sleep(30000L);
+					
+				} catch(InterruptedException ie) { }
+				
+				// Re-establish control connection
+				openControlChannel();
+				
 			} catch(RuntimeException re) {
 					
 				// Handle any other exception in processing the message
-				log.warn(re.getMessage(), re);
+				log.error(re.getMessage(), re);
+				
+				// take a break so don't loop like a fritz
+				try {
 					
+					Thread.sleep(5000L);
+				
+				} catch(InterruptedException ie) { }
 			}
 		}
 		
@@ -330,6 +356,10 @@ public class FXApplication extends Application implements Runnable
 		
 			controlThread.interrupt();
 			
+		}
+		if(ctl != null) {
+			
+			ctl.close();
 		}
 		
 		super.stop();

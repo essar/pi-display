@@ -2,6 +2,7 @@ package it.essar.pidisplay.display;
 
 import it.essar.pidisplay.common.appapi.ControlChannel;
 import it.essar.pidisplay.common.appapi.ControlChannelMessage;
+import it.essar.pidisplay.common.net.ConnectionState;
 import it.essar.pidisplay.common.net.KeepAliveConnection;
 import it.essar.pidisplay.common.net.ReadOnlyChannel;
 
@@ -25,26 +26,33 @@ class DisplayControlChannel extends KeepAliveConnection implements ControlChanne
 		super(brokerURI, clientID, serverID);
 			
 	}
+
+	private synchronized boolean isReady() {
+		
+		return (ctl != null && ctl.isAlive() && getConnectionState() == ConnectionState.CONNECTED);
+		
+	}
 	
 	private synchronized boolean waitForChannel(long timeout) {
 		
-		int maxTimeoutCount = 5;
-		int timeoutCount = 0;
-		long timeoutWait = timeout / maxTimeoutCount;
-			
-		while(ctl == null && timeoutCount < maxTimeoutCount) {
+		long waitTime = 5000L;
+		long accumulatedWait = 0L;
+		
+		while(!isReady() && accumulatedWait < timeout) {
 				
 			log.debug("Waiting for control channel to be established");
-			timeoutCount ++;
-				
+			long startTime = System.currentTimeMillis();
 			try {
 
-				wait(timeoutWait);
+				wait(waitTime);
 				
 			} catch(InterruptedException ie) { }
+			
+			accumulatedWait += System.currentTimeMillis() - startTime;
+			
 		}
 		
-		return (ctl != null);
+		return isReady();
 
 	}
 	
@@ -84,13 +92,9 @@ class DisplayControlChannel extends KeepAliveConnection implements ControlChanne
 		// Create control channel
 		String qName = getClientID() + ".DISP";
 		
-		synchronized(this) {
-			
-			ctl = new ReadOnlyChannel(getConnection(), qName);
-			notifyAll();
-			log.debug("Created read-only channel on {}", qName);
-			
-		}
+		ctl = new ReadOnlyChannel(getConnection(), qName);
+		log.debug("Created read-only channel on {}", qName);
+		
 	}
 	
 	@Override
@@ -132,13 +136,19 @@ class DisplayControlChannel extends KeepAliveConnection implements ControlChanne
 		
 		if(! waitForChannel(DisplayProperties.getControlChannelMessageTimeout())) {
 			
-			throw new ControlChannelException("No connection to control channel");
+			throw new ControlChannelException("Timeout waiting for channel to initialise");
 			
 		}
 	
 		try {
 			
 			Message msg = ctl.readMessage();
+			if(msg == null) {
+				
+				log.warn("Read null message from control channel");
+				return null;
+
+			}
 			log.info("Read message from control channel, messageID={}", msg.getJMSMessageID());
 			return new JMSControlChannelMessage(msg);
 			
