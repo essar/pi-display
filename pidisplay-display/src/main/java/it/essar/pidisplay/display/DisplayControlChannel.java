@@ -123,13 +123,13 @@ class DisplayControlChannel extends KeepAliveConnection implements ControlChanne
 	}
 	
 	
-	@Override
+	/*@Override
 	public void close() {
 
 		disconnect();
 		super.close();
 		
-	}
+	}*/
 	
 	@Override
 	public ControlChannelMessage readMessage() {
@@ -149,8 +149,11 @@ class DisplayControlChannel extends KeepAliveConnection implements ControlChanne
 				return null;
 
 			}
-			log.info("Read message from control channel, messageID={}", msg.getJMSMessageID());
-			return new JMSControlChannelMessage(msg);
+			
+			JMSControlChannelMessage ccMsg = new JMSControlChannelMessage(msg);
+
+			log.info("[MSG] {}|{}|{}|{}", getClientID(), getServerID(), ccMsg, msg.getJMSMessageID());
+			return ccMsg;
 			
 		} catch(JMSException jmse) {
 			
@@ -192,6 +195,13 @@ class DisplayControlChannel extends KeepAliveConnection implements ControlChanne
 
 			return msgType;
 		
+		}
+		
+		@Override
+		public String toString() {
+			
+			return String.format("%s|%s", msgType, msgAppID);
+			
 		}
 	}
 }

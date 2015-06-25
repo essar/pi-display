@@ -276,7 +276,7 @@ public class FXApplication extends Application implements Runnable
 				
 				// Something went wrong on the control channel
 				log.warn(cce.getMessage(), cce);
-				handleException("Unable to connect to server", cce);
+				//handleException("Unable to connect to server", cce);
 				
 				// Wait a little bit
 				try {
