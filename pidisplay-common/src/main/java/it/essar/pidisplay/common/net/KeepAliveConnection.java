@@ -89,6 +89,7 @@ public abstract class KeepAliveConnection
 					cxn = cxFac.createConnection();
 					
 				}
+				
 				log.debug("Connection established with {}", cxFac.getBrokerURL());
 				
 				{
@@ -113,12 +114,11 @@ public abstract class KeepAliveConnection
 				resp.reset();
 				
 				// Call out that connection is up
-				log.info("{} connection to {} is UP", getLocalID(), getRemoteID());
+				log.debug("{} connection to {} is UP", getLocalID(), getRemoteID());
 				cxnUp();
 				
 			} catch(JMSException jmse) {
 				
-				log.info("Unable to connect to {}, retrying...", cxFac.getBrokerURL());
 				log.debug("JMSException establishing connection", jmse);
 				
 				// Try again unless we've already reached maximum
@@ -133,7 +133,7 @@ public abstract class KeepAliveConnection
 				try {
 					
 					// Wait a beat before trying again
-					log.debug("Waiting {} ms", connectRetryDelay);
+					log.info("Unable to connect to {}, retrying in {} ms...", cxFac.getBrokerURL(), connectRetryDelay);
 					Thread.sleep(connectRetryDelay);
 					
 				} catch(InterruptedException ie) {}
@@ -146,7 +146,7 @@ public abstract class KeepAliveConnection
 	protected void disconnect() {
 		
 		setConnectionState(ConnectionState.DISCONNECTED);
-		log.info("{} connection to {} is DOWN", getLocalID(), getRemoteID());
+		log.debug("{} connection to {} is DOWN", getLocalID(), getRemoteID());
 		
 		if(cxn != null) {
 			
@@ -406,7 +406,7 @@ public abstract class KeepAliveConnection
 					while(running && !resp.hasChanged(lastValue, monitorTimeout)) {
 						
 						// Value in response hasn't changed
-						log.info("Last response received from {} received {} ms ago", getRemoteID(), System.currentTimeMillis() - resp.getLastReceivedTime());
+						log.debug("Last response received from {} received {} ms ago", getRemoteID(), System.currentTimeMillis() - resp.getLastReceivedTime());
 						
 						// Call out to check if we should keep running
 						running = cxnTimeout();

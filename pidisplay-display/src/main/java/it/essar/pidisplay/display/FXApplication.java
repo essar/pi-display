@@ -50,6 +50,20 @@ public class FXApplication extends Application implements Runnable
 
 	}
 	
+	private static URI parseURI(String uriString) {
+		
+		try {
+			
+			return new URI(uriString);
+			
+		} catch(URISyntaxException use) {
+			
+			log.warn("Invalid URI: {}", uriString);
+			return null;
+			
+		}
+	}
+	
 	private void closeApplication() {
 		
 		primaryStage.close();
@@ -86,39 +100,28 @@ public class FXApplication extends Application implements Runnable
 		
 		// Create data channel connection
 		dat = new DisplayDataChannel();
+		log.debug("dat={}", dat);
 		
 		if(dat == null) {
 			
-			log.debug("Null data channel");
 			throw new DataChannelException("Data channel not established");
 			
 		}
 			
 		// Read information object from data channel
-		ServerInfo init = dat.getInfo();
+		ServerInfo info = dat.getInfo();
 		
-		if(init == null) {
+		if(info == null) {
 			
-			log.debug("Null ServerInit | dat={}", dat);
 			throw new DataChannelException("Invalid server information");
 			
 		}
 			
-		serverID = init.getServerID();
-		clientID = init.getClientID();
-		log.debug("serverID={} | clientID={}", serverID, clientID);
+		serverID = info.getServerID();
+		clientID = info.getClientID();
+		brokerURI = parseURI(info.getBrokerURL());
+		log.debug("serverID={} | clientID={} | brokerURI={}", serverID, clientID, brokerURI);
 
-		String brokerURIStr = init.getBrokerURL();
-		try {
-			
-			brokerURI = new URI(brokerURIStr);
-			log.debug("brokerURI={}", brokerURI.toString());
-				
-		} catch(URISyntaxException use) {
-				
-			log.warn("Invalid broker URI: {}", brokerURIStr);
-			
-		}
 	}
 	
 	private void openControlChannel() {
@@ -159,8 +162,6 @@ public class FXApplication extends Application implements Runnable
 		// Pass to relevant application
 		if(appID == null || CoreApplication.APPLICATION_ID.equals(appID)) {
 		
-			log.info("Process core application message: {}", msgType);
-			
 			// Handle by core application
 			switch(CoreApplication.MessageTypes.valueOf(msgType)) {
 			
@@ -189,7 +190,8 @@ public class FXApplication extends Application implements Runnable
 					break;
 					
 				default:
-					
+
+					log.warn("Unknown message type: {}", msgType);
 					throw new UnsupportedOperationException("Unknown message type for core application: " + cMsg.getMessageType());
 			
 			}
@@ -219,6 +221,7 @@ public class FXApplication extends Application implements Runnable
 				@Override
 				public void run() {
 					
+					log.debug("Updating connection state ({})", newState);
 					base.cxnStatePane.setConnectionState(newState);
 				
 				}
@@ -275,7 +278,7 @@ public class FXApplication extends Application implements Runnable
 			} catch(ControlChannelException cce) {
 				
 				// Something went wrong on the control channel
-				log.warn(cce.getMessage(), cce);
+				log.error(cce.getMessage(), cce);
 				//handleException("Unable to connect to server", cce);
 				
 				// Wait a little bit
@@ -311,8 +314,7 @@ public class FXApplication extends Application implements Runnable
 	@Override
 	public void init() throws Exception {
 		
-		super.init();
-		
+		log.debug("FX application initialising");
 		try {
 			
 			// Establish data channel and retrieve client ID
@@ -333,6 +335,8 @@ public class FXApplication extends Application implements Runnable
 	
 	@Override
 	public void start(Stage primaryStage) {
+
+		log.debug("FX application starting");
 		
 		running = true;
 		if(controlThread != null) {
@@ -351,6 +355,8 @@ public class FXApplication extends Application implements Runnable
 	@Override
 	public void stop() throws Exception {
 
+		log.debug("FX application stopping");
+		
 		running = false;
 		if(controlThread != null) {
 		
@@ -361,9 +367,6 @@ public class FXApplication extends Application implements Runnable
 			
 			ctl.close();
 		}
-		
-		super.stop();
-		
 	}
 	
 	public static void main(String[] args) {
