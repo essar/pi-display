@@ -30,8 +30,8 @@ public abstract class KeepAliveConnection
 	private ConnectionState cxnState;
 	private ReadWriteChannel ka;
 	
-	protected int maxConnectAttempts = 5;
 	protected long connectRetryDelay = 5000L;
+	protected long connectTimeout = 30000L;
 	protected long monitorTimeout = 10000L;
 	protected long replyDelay = 3000L;
 	
@@ -73,6 +73,7 @@ public abstract class KeepAliveConnection
 	protected boolean connect() {
 		
 		int connectAttempts = 0;
+		long connectStart = System.currentTimeMillis();
 		
 		setConnectionState(ConnectionState.CONNECTING);
 		
@@ -82,7 +83,7 @@ public abstract class KeepAliveConnection
 			
 			try {
 				
-				log.debug("Connecting to {}, attempt {}/{}", cxFac.getBrokerURL(), connectAttempts, maxConnectAttempts);
+				log.debug("Connecting to {}, attempt {}", cxFac.getBrokerURL(), connectAttempts);
 				
 				if(cxn == null) {
 				
@@ -121,9 +122,9 @@ public abstract class KeepAliveConnection
 				
 				log.debug("JMSException establishing connection", jmse);
 				
-				// Try again unless we've already reached maximum
+				// Try again unless we've already reached timeout
 				
-				if(maxConnectAttempts > 0 && connectAttempts >= maxConnectAttempts) {
+				if(connectTimeout > 0 && (System.currentTimeMillis() - connectStart) >= connectTimeout) {
 					
 					log.error("Could not connect to host: {}", jmse.getMessage());
 					return false;
@@ -262,6 +263,12 @@ public abstract class KeepAliveConnection
 		
 	}
 	
+	public long getConnectTimeout() {
+		
+		return connectTimeout;
+		
+	}
+	
 	public Connection getConnection() {
 		
 		return cxn;
@@ -277,12 +284,6 @@ public abstract class KeepAliveConnection
 	public String getClientID() {
 		
 		return clientID;
-		
-	}
-	
-	public int getMaxConnectAttempts() {
-		
-		return maxConnectAttempts;
 		
 	}
 	
@@ -312,10 +313,10 @@ public abstract class KeepAliveConnection
 		
 	}
 	
-	public void setMaxConnectAttempts(int maxConnectAttempts) {
+	public void setConnectTimeout(long connectTimeout) {
 		
-		log.debug("MaxConnectAttempts={}", maxConnectAttempts);
-		this.maxConnectAttempts = maxConnectAttempts;
+		log.debug("ConnectTimeout={}", connectTimeout);
+		this.connectTimeout = connectTimeout;
 		
 	}
 	

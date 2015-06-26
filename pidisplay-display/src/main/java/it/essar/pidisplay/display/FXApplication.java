@@ -284,7 +284,7 @@ public class FXApplication extends Application implements Runnable
 				// Wait a little bit
 				try {
 					
-					Thread.sleep(30000L);
+					Thread.sleep(60000L);
 					
 				} catch(InterruptedException ie) { }
 				
