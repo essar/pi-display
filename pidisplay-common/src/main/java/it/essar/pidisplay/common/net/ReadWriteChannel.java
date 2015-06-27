@@ -70,37 +70,19 @@ public class ReadWriteChannel extends AbstractChannel
 	
 	public Message createMessage() throws JMSException {
 		
-		while(sess == null) {
-			
-			reset();
-			
-		}
-		
-		return sess.createTextMessage();
+		return createMessage(sess);
 		
 	}
 	
 	public Message readMessage() throws JMSException {
 		
-		while(mc == null) {
-				
-			reset();
-				
-		}
-			
-		return mc.receive();
+		return readMessage(mc);
 			
 	}
 	
 	public void sendMessage(Message msg) throws JMSException {
 		
-		while(mp == null) {
-			
-			reset();
-			
-		}
-		
-		mp.send(msg);
+		sendMessage(mp, msg);
 		
 	}
 }

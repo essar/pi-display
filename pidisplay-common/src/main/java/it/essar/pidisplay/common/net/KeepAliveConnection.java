@@ -1,11 +1,14 @@
 package it.essar.pidisplay.common.net;
 
+import it.essar.pidisplay.common.appapi.ControlChannelMessage;
+
 import java.net.URI;
 
 import javax.jms.Connection;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageListener;
+import javax.jms.TextMessage;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.logging.log4j.LogManager;
@@ -194,6 +197,12 @@ public abstract class KeepAliveConnection
 		}
 	}
 	
+	protected long getLastStt() {
+		
+		return resp.getLastStt();
+		
+	}
+	
 	protected long getMillisSinceLastResp() {
 		
 		return System.currentTimeMillis() - resp.getLastCreatedTime();
@@ -363,10 +372,10 @@ public abstract class KeepAliveConnection
 				// Read message properties
 				long createdTime = msg.getLongProperty(propertyCreatedTime);
 				String senderID = msg.getStringProperty(propertySenderID);
-				log.debug("KA received ({}) from {}", createdTime, senderID);
 				
 				// Update response
 				resp.update(createdTime);
+				log.debug("KA received ({}) from {}, ({}ms)", createdTime, senderID, resp.getLastStt());
 				
 				// Wait for a short time before sending a message back
 				try {

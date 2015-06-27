@@ -150,7 +150,7 @@ class DisplayControlChannel extends KeepAliveConnection implements ControlChanne
 
 			}
 			
-			JMSControlChannelMessage ccMsg = new JMSControlChannelMessage(msg);
+			DisplayControlChannelMessage ccMsg = new DisplayControlChannelMessage(msg);
 
 			log.info("[MSG] {}|{}|{}|{}", getClientID(), getServerID(), ccMsg, msg.getJMSMessageID());
 			return ccMsg;
@@ -163,11 +163,11 @@ class DisplayControlChannel extends KeepAliveConnection implements ControlChanne
 		}
 	}
 	
-	static class JMSControlChannelMessage implements ControlChannelMessage
+	static class DisplayControlChannelMessage implements ControlChannelMessage
 	{
 		private String msgAppID, msgBody, msgType;
 		
-		public JMSControlChannelMessage(Message msg) throws JMSException {
+		public DisplayControlChannelMessage(Message msg) throws JMSException {
 			
 			TextMessage txt = (TextMessage) msg;
 			msgAppID = txt.getStringProperty("application-id");

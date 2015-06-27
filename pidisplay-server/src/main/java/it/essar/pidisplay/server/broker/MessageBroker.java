@@ -200,12 +200,12 @@ public class MessageBroker implements MonitorableProcess
 			
 		}*/
 		
-		try {
+		/*try {
 			ServerControlChannel svr = new ServerControlChannel(new URI("tcp://localhost:61616/" + MessageBroker.BROKER_NAME), "TestClient", "TestServer");
 			svr.start();
 		} catch(Exception e) {
 			throw new RuntimeException(e);
-		}
+		}*/
 		
 		/*try {
 			Thread.sleep(15000L);

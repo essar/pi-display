@@ -3,6 +3,7 @@ package it.essar.pidisplay.display;
 import it.essar.pidisplay.apps.dashboard.display.DashboardApplication;
 import it.essar.pidisplay.common.appapi.ControlChannel;
 import it.essar.pidisplay.common.appapi.ControlChannelMessage;
+import it.essar.pidisplay.common.appapi.CoreApplication;
 import it.essar.pidisplay.common.appapi.DataChannel;
 import it.essar.pidisplay.common.appapi.Display;
 import it.essar.pidisplay.common.appapi.DisplayEnvironment;
@@ -281,7 +282,7 @@ public class FXApplication extends Application implements Runnable
 				log.error(cce.getMessage(), cce);
 				//handleException("Unable to connect to server", cce);
 				
-				// Wait a little bit
+				// Wait a minute before trying again
 				try {
 					
 					Thread.sleep(60000L);

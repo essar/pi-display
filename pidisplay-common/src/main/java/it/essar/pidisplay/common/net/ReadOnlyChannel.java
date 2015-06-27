@@ -49,13 +49,7 @@ public class ReadOnlyChannel extends AbstractChannel
 	
 	public Message readMessage() throws JMSException {
 		
-		while(mc == null) {
-				
-			reset();
-				
-		}
-			
-		return mc.receive();
+		return readMessage(mc);
 			
 	}
 }

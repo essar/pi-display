@@ -1,11 +1,15 @@
 package it.essar.pidisplay.server.broker;
 
+import it.essar.pidisplay.common.appapi.ControlChannelMessage;
+import it.essar.pidisplay.common.msgs.ResetMessage;
 import it.essar.pidisplay.common.net.KeepAliveConnection;
 import it.essar.pidisplay.common.net.WriteOnlyChannel;
 
 import java.net.URI;
 
 import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.TextMessage;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -67,7 +71,18 @@ public class ServerControlChannel extends KeepAliveConnection
 	
 	@Override
 	protected void cxnUp() {
+
 		
+		try {
+			// Temporary send reset message
+		
+			ctl.sendMessage(new JMSControlChannelMessage().getMessage(ctl.createMessage(), new ResetMessage()));
+			
+		} catch(JMSException jmse) {
+			
+			log.warn(jmse.getMessage(), jmse);
+			
+		}
 	}
 	
 	@Override
@@ -106,5 +121,52 @@ public class ServerControlChannel extends KeepAliveConnection
 		// Listen to messages from client
 		return getClientID();
 		
+	}
+	
+	static class JMSControlChannelMessage implements ControlChannelMessage
+	{
+		private String msgAppID, msgBody, msgType;
+		
+		public JMSControlChannelMessage() {
+			
+		}
+		
+		Message getMessage(Message msg, ControlChannelMessage ccm) throws JMSException {
+			
+			TextMessage txt = (TextMessage) msg;
+			txt.setStringProperty("application-id", ccm.getMessageAppID());
+			txt.setText(ccm.getMessageBody());
+			txt.setStringProperty("msgType", ccm.getMessageType());
+			return msg;
+			
+		}
+		
+		@Override
+		public String getMessageAppID() {
+
+			return msgAppID;
+			
+		}
+		
+		@Override
+		public String getMessageBody() {
+
+			return msgBody;
+		
+		}
+		
+		@Override
+		public String getMessageType() {
+
+			return msgType;
+		
+		}
+		
+		@Override
+		public String toString() {
+			
+			return String.format("%s|%s", msgType, msgAppID);
+			
+		}
 	}
 }

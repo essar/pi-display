@@ -52,25 +52,13 @@ public class WriteOnlyChannel extends AbstractChannel
 	
 	public Message createMessage() throws JMSException {
 		
-		while(sess == null) {
-			
-			reset();
-			
-		}
-		
-		return sess.createTextMessage();
+		return createMessage(sess);
 		
 	}
 	
 	public void sendMessage(Message msg) throws JMSException {
 		
-		while(mp == null) {
-			
-			reset();
-			
-		}
-		
-		mp.send(msg);
+		sendMessage(mp, msg);
 	
 	}
 }
