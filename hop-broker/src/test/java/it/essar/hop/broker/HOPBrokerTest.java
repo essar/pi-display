@@ -17,6 +17,7 @@ import org.junit.Test;
  */
 public class HOPBrokerTest
 {
+	private HOPBroker broker;
 	
 	@After
 	public void cleanup() {
@@ -29,10 +30,10 @@ public class HOPBrokerTest
 	public void testBrokerStartStopOK() {
 		
 		HOPBroker.startBroker();
-		assertTrue("Broker started", HOPBroker.isStarted());
+		assertTrue("Broker started", HOPBroker.isBrokerStarted());
 		
 		HOPBroker.stopBroker();
-		assertFalse("Broker not started", HOPBroker.isStarted());
+		assertFalse("Broker not started", HOPBroker.isBrokerStarted());
 		
 	}
 	
@@ -40,12 +41,13 @@ public class HOPBrokerTest
 	public void testBrokerStartVmConnectOK() throws JMSException {
 		
 		HOPBroker.startBroker();
-		assertTrue("Broker started", HOPBroker.isStarted());
+		assertTrue("Broker started", HOPBroker.isBrokerStarted());
+		broker = HOPBroker.getBroker();
 		
 		Connection cxn = null;
 		try {
 			
-			cxn = HOPBroker.getLocalConnectionFactory().createConnection();
+			cxn = broker.getLocalConnectionFactory().createConnection();
 			assertNotNull("Connection established locally", cxn);
 			
 		} finally {
@@ -62,7 +64,8 @@ public class HOPBrokerTest
 	public void testBrokerStartTcpConnectOK() throws JMSException {
 		
 		HOPBroker.startBroker();
-		assertTrue("Broker started", HOPBroker.isStarted());
+		assertTrue("Broker started", HOPBroker.isBrokerStarted());
+		broker = HOPBroker.getBroker();
 		
 		Connection cxn = null;
 		try {
@@ -81,10 +84,17 @@ public class HOPBrokerTest
 		}
 	}
 	
-	@Test(expected=IllegalStateException.class)
-	public void testBrokerConnectNotStartedFail() throws JMSException {
+	@Test
+	public void testBrokerAutoRestartOK() throws JMSException {
 		
-		HOPBroker.getLocalConnectionFactory().createConnection();
+		HOPBroker.startBroker();
+		assertTrue("Broker started", HOPBroker.isBrokerStarted());
+		broker = HOPBroker.getBroker();
+		
+		try { Thread.sleep(500); } catch(InterruptedException ie) {}
+		broker.abort();
+		try { Thread.sleep(5500); } catch(InterruptedException ie) {}
+		assertTrue("Broker started", HOPBroker.isBrokerStarted());
 		
 	}
 }
