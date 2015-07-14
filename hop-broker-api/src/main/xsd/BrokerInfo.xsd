@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema targetNamespace="http://www.essar.it/hop/broker/api/" xmlns="http://www.w3.org/2001/XMLSchema" xmlns:bi="http://www.essar.it/hop/broker/api/">
+    <simpleType name="BrokerNameType">
+    	<restriction base="string"></restriction>
+    </simpleType>
+
+    <complexType name="BrokerInfoType">
+    	<sequence>
+    		<element name="brokerID" type="bi:BrokerIDType"></element>
+    		<element name="brokerName" type="bi:BrokerNameType"></element>
+    		<element name="destinations" type="bi:DestinationSet"></element>
+    		<element name="clients" type="bi:ConnectionSet"></element>
+    	</sequence>
+    </complexType>
+
+    <element name="brokerInfo" type="bi:BrokerInfoType"></element>
+
+    <simpleType name="BrokerIDType">
+    	<restriction base="string"></restriction>
+    </simpleType>
+
+    <simpleType name="ConnectionIDType">
+    	<restriction base="string"></restriction>
+    </simpleType>
+
+    <simpleType name="RemoteAddressType">
+    	<restriction base="string"></restriction>
+    </simpleType>
+
+    <simpleType name="IsNetworkConnectionType">
+    	<restriction base="boolean"></restriction>
+    </simpleType>
+
+    <simpleType name="CountType">
+    	<restriction base="integer"></restriction>
+    </simpleType>
+
+    <complexType name="ConnectionStatisticsType">
+    	<sequence>
+    		<element name="enqueues" type="bi:CountType"></element>
+    		<element name="dequeues" type="bi:CountType"></element>
+    	</sequence>
+    </complexType>
+
+    <complexType name="ConnectionType">
+    	<sequence>
+    		<element name="connectionID" type="bi:ConnectionIDType"></element>
+    		<element name="networkConnection"
+    			type="bi:IsNetworkConnectionType">
+    		</element>
+    		<element name="remoteAddress" type="bi:RemoteAddressType"></element>
+    		<element name="statistics"
+    			type="bi:ConnectionStatisticsType">
+    		</element>
+    	</sequence>
+    </complexType>
+
+    <simpleType name="IsQueueType">
+    	<restriction base="boolean"></restriction>
+    </simpleType>
+
+    <simpleType name="IsTopicType">
+    	<restriction base="boolean"></restriction>
+    </simpleType>
+
+    <simpleType name="IsTemporaryType">
+    	<restriction base="boolean"></restriction>
+    </simpleType>
+
+    <simpleType name="PhysicalNameType">
+    	<restriction base="string"></restriction>
+    </simpleType>
+
+
+    <simpleType name="QualifiedNameType">
+    	<restriction base="string"></restriction>
+    </simpleType>
+
+    <complexType name="DestinationType">
+    	<sequence>
+    		<element name="physicalName" type="bi:PhysicalNameType"></element>
+    		<element name="qualifiedName" type="bi:QualifiedNameType"></element>
+    		<element name="queue" type="bi:IsQueueType"></element>
+    		<element name="temporary" type="bi:IsTemporaryType"></element>
+    		<element name="topic" type="bi:IsTopicType"></element>
+    	</sequence>
+    </complexType>
+
+    <complexType name="DestinationSet">
+    	<sequence>
+    		<element name="destination" type="bi:DestinationType" maxOccurs="unbounded" minOccurs="0"></element>
+    	</sequence>
+    </complexType>
+
+
+    <complexType name="ConnectionSet">
+    	<sequence>
+    		<element name="connection" type="bi:ConnectionType" maxOccurs="unbounded" minOccurs="0"></element>
+    	</sequence>
+    </complexType>
+</schema>
