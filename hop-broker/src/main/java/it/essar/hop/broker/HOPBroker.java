@@ -1,12 +1,23 @@
 package it.essar.hop.broker;
 
+import it.essar.hop.broker.api.BrokerInfoType;
+import it.essar.hop.broker.api.ConnectionSet;
+import it.essar.hop.broker.api.ConnectionStatisticsType;
+import it.essar.hop.broker.api.ConnectionType;
+import it.essar.hop.broker.api.DestinationSet;
+import it.essar.hop.broker.api.DestinationType;
+import it.essar.hop.broker.api.ObjectFactory;
+
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.Properties;
 
 import javax.jms.JMSException;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.broker.Connection;
+import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -15,6 +26,7 @@ import org.apache.logging.log4j.Logger;
  * @author Steve Roberts <steve.roberts@essarsoftware.co.uk>
  * @version 1.0
  */
+@Deprecated
 public class HOPBroker
 {
 
@@ -26,6 +38,8 @@ public class HOPBroker
 	
 	static String DEF_BROKER_NAME = "hop-broker";
 	static String DEF_TCP_ADDRESS = "tcp://localhost:61616";
+	
+	public static final String CF_JNDI_NAME = "HOPBrokerCF";
 	
 	private final BrokerService svc;
 	
@@ -66,12 +80,12 @@ public class HOPBroker
 	}
 	
 	/**
-	 * Gets the current broker object.
-	 * @return the current broker.
+	 * Checks if the broker service has been started.
+	 * @return true if the broker is running, false if it has not been started or has been stopped.
 	 */
-	static HOPBroker getBroker() {
+	static boolean isBrokerStarted() {
 		
-		return broker;
+		return (broker != null && broker.svc.waitUntilStarted(500L));
 		
 	}
 	
@@ -100,19 +114,19 @@ public class HOPBroker
 	}
 	
 	/**
-	 * Checks if the broker service has been started.
-	 * @return true if the broker is running, false if it has not been started or has been stopped.
+	 * Gets the current broker object.
+	 * @return the current broker.
 	 */
-	public static boolean isBrokerStarted() {
+	public static HOPBroker getBroker() {
 		
-		return (broker != null && broker.svc.waitUntilStarted(500L));
+		return broker;
 		
 	}
 	
 	/**
 	 * Starts the default broker. Blocks until startup is complete.
 	 */
-	public static void startBroker() { 
+	public static HOPBroker startBroker() { 
 		
 		if(broker == null) {
 			
@@ -123,6 +137,8 @@ public class HOPBroker
 		monitor.startMonitor();
 		waitUntilStarted();
 		log.info("Broker service started");
+
+		return getBroker();
 
 	}
 	
@@ -241,22 +257,6 @@ public class HOPBroker
 	}
 	
 	/**
-	 * Gets a {@see ConnectionFactory} object that refers to the embedded broker service.
-	 * @return the ConnectionFactory.
-	 */
-	ActiveMQConnectionFactory getLocalConnectionFactory() {
-		
-		if(!isStarted()) {
-			
-			throw new IllegalStateException("Broker not running");
-			
-		}
-
-		return new ActiveMQConnectionFactory(svc.getVmConnectorURI());
-		
-	}
-	
-	/**
 	 * Gets the name of the broker.
 	 * @return the name of this broker.
 	 */
@@ -276,7 +276,79 @@ public class HOPBroker
 		
 	}
 	
+	/**
+	 * Returns information about the broker.
+	 * @return current broker runtime and administration information.
+	 */
+	public BrokerInfoType getBrokerInfo() {
+		
+		ObjectFactory of = new ObjectFactory();
+		
+		BrokerInfoType bit = of.createBrokerInfoType();
 
+		try {
+			
+			bit.setBrokerID(svc.getBroker().getBrokerId().getValue());
+			bit.setBrokerName(svc.getBrokerName());
+			
+			ConnectionSet cs = of.createConnectionSet();
+			for(Connection c : svc.getBroker().getClients()) {
+				
+				ConnectionType ct = of.createConnectionType();
+				ct.setConnectionID(c.getConnectionId());
+				ct.setRemoteAddress(c.getRemoteAddress());
+				ct.setNetworkConnection(c.isNetworkConnection());
+				
+				ConnectionStatisticsType cst = of.createConnectionStatisticsType();
+				cst.setDequeues(BigInteger.valueOf(c.getStatistics().getDequeues().getCount()));
+				cst.setEnqueues(BigInteger.valueOf(c.getStatistics().getEnqueues().getCount()));
+				ct.setStatistics(cst);
+				
+				cs.getConnection().add(ct);
+				
+			}
+			bit.setClients(cs);
+
+			DestinationSet ds = of.createDestinationSet();
+			for(ActiveMQDestination d : svc.getBroker().getDestinations()) {
+				
+				DestinationType dt = of.createDestinationType();
+				dt.setPhysicalName(d.getPhysicalName());
+				dt.setQualifiedName(d.getQualifiedName());
+				dt.setQueue(d.isQueue());
+				dt.setTemporary(d.isTemporary());
+				dt.setTopic(d.isTopic());
+				
+				ds.getDestination().add(dt);
+				
+			}
+			bit.setDestinations(ds);
+			
+		} catch(Exception e) {
+			
+			log.error(e);
+	
+		}
+		return bit;
+		
+	}
+	
+	/**
+	 * Gets a {@see ConnectionFactory} object that refers to the embedded broker service.
+	 * @return the ConnectionFactory.
+	 */
+	public ActiveMQConnectionFactory getLocalConnectionFactory() {
+		
+		if(!isStarted()) {
+			
+			throw new IllegalStateException("Broker not running");
+			
+		}
+
+		return new ActiveMQConnectionFactory(svc.getVmConnectorURI());
+		
+	}
+	
 	/**
 	 * Monitor class for the broker. Ensures that the broker is automatically restarted should it stop for any reason.
 	 * @author Steve Roberts <steve.roberts@essarsoftware.co.uk>

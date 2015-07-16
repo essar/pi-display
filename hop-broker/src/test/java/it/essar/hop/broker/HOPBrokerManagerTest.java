@@ -12,42 +12,39 @@ import org.junit.After;
 import org.junit.Test;
 
 /**
- * Test case for {@see HOPBroker}.
+ * Test case for {@see HOPBrokerManager}.
  * @author Steve Roberts <steve.roberts@essarsoftware.co.uk>
  */
-public class HOPBrokerTest
+public class HOPBrokerManagerTest
 {
-	private HOPBroker broker;
-	
 	@After
 	public void cleanup() {
 
-		HOPBroker.stopBroker();
+		HOPBrokerManager.stopBroker();
 		
 	}
 
 	@Test
 	public void testBrokerStartStopOK() {
 		
-		HOPBroker.startBroker();
-		assertTrue("Broker started", HOPBroker.isBrokerStarted());
+		HOPBrokerManager.startBroker();
+		assertTrue("Broker started", HOPBrokerManager.isBrokerStarted());
 		
-		HOPBroker.stopBroker();
-		assertFalse("Broker not started", HOPBroker.isBrokerStarted());
+		HOPBrokerManager.stopBroker();
+		assertFalse("Broker not started", HOPBrokerManager.isBrokerStarted());
 		
 	}
 	
 	@Test
 	public void testBrokerStartVmConnectOK() throws JMSException {
 		
-		HOPBroker.startBroker();
-		assertTrue("Broker started", HOPBroker.isBrokerStarted());
-		broker = HOPBroker.getBroker();
+		HOPBrokerManager.startBroker();
+		assertTrue("Broker started", HOPBrokerManager.isBrokerStarted());
 		
 		Connection cxn = null;
 		try {
 			
-			cxn = broker.getLocalConnectionFactory().createConnection();
+			cxn = HOPBrokerManager.getLocalConnectionFactory().createConnection();
 			assertNotNull("Connection established locally", cxn);
 			
 		} finally {
@@ -63,14 +60,13 @@ public class HOPBrokerTest
 	@Test
 	public void testBrokerStartTcpConnectOK() throws JMSException {
 		
-		HOPBroker.startBroker();
-		assertTrue("Broker started", HOPBroker.isBrokerStarted());
-		broker = HOPBroker.getBroker();
+		HOPBrokerManager.startBroker();
+		assertTrue("Broker started", HOPBrokerManager.isBrokerStarted());
 		
 		Connection cxn = null;
 		try {
 			
-			ActiveMQConnectionFactory mqf = new ActiveMQConnectionFactory(HOPBroker.DEF_TCP_ADDRESS);
+			ActiveMQConnectionFactory mqf = HOPBrokerService.getDefaultTCPConnectionFactory();
 			cxn = mqf.createConnection();
 			assertNotNull("Connection established over TCP", cxn);
 			
@@ -87,14 +83,19 @@ public class HOPBrokerTest
 	@Test
 	public void testBrokerAutoRestartOK() throws JMSException {
 		
-		HOPBroker.startBroker();
-		assertTrue("Broker started", HOPBroker.isBrokerStarted());
-		broker = HOPBroker.getBroker();
+		HOPBrokerManager.startBroker();
 		
+		// Wait for start up proccess to complete
 		try { Thread.sleep(500); } catch(InterruptedException ie) {}
-		broker.abort();
-		try { Thread.sleep(5500); } catch(InterruptedException ie) {}
-		assertTrue("Broker started", HOPBroker.isBrokerStarted());
+		
+		assertTrue("Broker started", HOPBrokerManager.isBrokerStarted());
+		HOPBrokerManager.getBroker().stop();
+		
+		// Wait for more than 5 seconds so that monitor can run
+		try { Thread.sleep(5500L); } catch(InterruptedException ie) {}
+		
+		// Check that broker has restarted
+		assertTrue("Broker started", HOPBrokerManager.isBrokerStarted());
 		
 	}
 }
