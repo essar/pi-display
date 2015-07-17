@@ -8,6 +8,12 @@
     	<sequence>
     		<element name="brokerID" type="bi:BrokerIDType"></element>
     		<element name="brokerName" type="bi:BrokerNameType"></element>
+    		<element name="brokerVersion" type="bi:BrokerVersionType"></element>
+    		<element name="runtime" type="bi:BrokerRuntimeType"></element>
+    		<element name="queues" type="bi:ObjectNameSet"></element>
+    		<element name="temporaryQueues" type="bi:ObjectNameSet"></element>
+    		<element name="temporaryTopics" type="bi:ObjectNameSet"></element>
+    		<element name="topics" type="bi:ObjectNameSet"></element>
     		<element name="destinations" type="bi:DestinationSet"></element>
     		<element name="clients" type="bi:ConnectionSet"></element>
     	</sequence>
@@ -98,4 +104,64 @@
     		<element name="connection" type="bi:ConnectionType" maxOccurs="unbounded" minOccurs="0"></element>
     	</sequence>
     </complexType>
+
+    <simpleType name="BrokerVersionType">
+    	<restriction base="string"></restriction>
+    </simpleType>
+
+    <simpleType name="MemoryLimitType">
+    	<restriction base="long"></restriction>
+    </simpleType>
+
+    <simpleType name="MemoryPercentUsageType">
+    	<restriction base="int"></restriction>
+    </simpleType>
+
+    <simpleType name="ObjectNameType">
+    	<restriction base="string"></restriction>
+    </simpleType>
+
+    <complexType name="BrokerRuntimeType">
+    	<sequence>
+    		<element name="memoryLimit" type="bi:MemoryLimitType"></element>
+    		<element name="memoryPercentUsage"
+    			type="bi:MemoryPercentUsageType">
+    		</element>
+    		<element name="storeLimit" type="bi:StoreLimitType"></element>
+    		<element name="storePercentUsage"
+    			type="bi:StorePercentUsageType">
+    		</element>
+    		<element name="tempLimit" type="bi:TempLimitType"></element>
+    		<element name="tempPercentUsage"
+    			type="bi:TempPercentUsageType">
+    		</element>
+    		<element name="uptimeMillis" type="bi:UptimeMillisType"></element>
+    	</sequence>
+    </complexType>
+
+    <complexType name="ObjectNameSet">
+    	<sequence>
+    		<element name="canonicalName" type="bi:ObjectNameType" maxOccurs="unbounded" minOccurs="0"></element>
+    	</sequence>
+    </complexType>
+
+    <simpleType name="UptimeMillisType">
+    	<restriction base="long"></restriction>
+    </simpleType>
+
+    <simpleType name="TempLimitType">
+    	<restriction base="long"></restriction>
+    </simpleType>
+
+    <simpleType name="TempPercentUsageType">
+    	<restriction base="int"></restriction>
+    </simpleType>
+
+    <simpleType name="StoreLimitType">
+    	<restriction base="long"></restriction>
+    </simpleType>
+
+    <simpleType name="StorePercentUsageType">
+    	<restriction base="int"></restriction>
+    </simpleType>
 </schema>

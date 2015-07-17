@@ -6,10 +6,12 @@
   <packaging>pom</packaging>
   <modules>
   	<module>../hop-broker</module>
+  	<module>hop-webapp-support</module>
   </modules>
   <properties>
   	<libs.log4j.version>2.2</libs.log4j.version>
   	<libs.junit.version>4.12</libs.junit.version>
+  	<libs.jersey.version>2.19</libs.jersey.version>
   </properties>
   <dependencies>
   	<dependency>
